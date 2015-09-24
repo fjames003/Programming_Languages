@@ -131,13 +131,13 @@ let _ = assert (zip [1;2] ['a';'b']  = [(1,'a');(2,'b')]);;
    Implement foldn using explicit recursion.
  *)
 
-(* let rec foldn : (int -> 'a -> 'a) -> int -> 'a -> 'a = 
+let rec foldn : (int -> 'a -> 'a) -> int -> 'a -> 'a = 
    fun f -> function n -> fun b -> match n with
    | 0 -> b
-   | _ -> (foldn f (n - 1) (f b))
+   | _ -> f n (foldn f (n - 1) b)
 
 let _ = assert (foldn (fun x y -> x*y) 5 1 = 5 * 4 * 3 * 2 * 1);;
-let _ = assert (foldn (fun x y -> x-y) 5 1 = 5 - (4 - (3 - (2 - 1))));; *)
+let _ = assert (foldn (fun x y -> x-y) 5 1 = 5 - (4 - (3 - (2 - 1))));;
 
 (* Problem 2d.
    Implement the clone function from Homework 1 as a single call to
