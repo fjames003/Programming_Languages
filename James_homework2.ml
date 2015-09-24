@@ -74,9 +74,8 @@ let _ = assert (encode ['a';'a';'a';'b';'c';'c'] = [(3,'a');(1,'b');(2,'c')]);;
    The function intOfDigits from Homework 1.
  *)
 
-(* let intOfDigits : int list -> int =
-   let len = List.length in
-   fun lst -> fold_right (fun x y-> y + (x * 10 )) lst 0 *)
+let intOfDigits : int list -> int =
+   fun lst -> fold_left (fun x y-> y + (x * 10 )) 0 lst
 
 (***********************************************************************
  * Problem 2: Defining higher-order functions.
