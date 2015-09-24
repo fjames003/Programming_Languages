@@ -52,3 +52,13 @@ let rec insert ((x, t) : int * tree) : tree =
 let _ = assert (insert (1, Leaf) = TreeNode(Leaf, 1, Leaf))
 let _ = assert (insert (1, TreeNode(Leaf, 1, Leaf)) = TreeNode(TreeNode(Leaf, 1, Leaf), 1, Leaf))
 let _ = assert (insert (2, TreeNode(Leaf, 1, Leaf)) = TreeNode(Leaf, 1, TreeNode(Leaf, 2, Leaf)))
+
+
+let sort(l : 'a list) : 'a list = 
+   let rec helper (lst, t) = 
+   	match lst with
+   	| [] -> tree_to_list(t)
+   	| hd::tl -> helper(tl, insert(hd, t))
+   in helper(l, Leaf)
+
+ let _ = assert (sort([7;4;3;6;2;1]) = [1;2;3;4;6;7])
