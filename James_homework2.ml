@@ -77,6 +77,8 @@ let _ = assert (encode ['a';'a';'a';'b';'c';'c'] = [(3,'a');(1,'b');(2,'c')]);;
 let intOfDigits : int list -> int =
    fun lst -> fold_left (fun x y-> y + (x * 10 )) 0 lst
 
+let _ = assert (intOfDigits [1;2;3] = 123)
+
 (***********************************************************************
  * Problem 2: Defining higher-order functions.
  ***********************************************************************)
