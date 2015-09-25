@@ -136,17 +136,28 @@ let rec foldn : (int -> 'a -> 'a) -> int -> 'a -> 'a =
    | 0 -> b
    | _ -> f n (foldn f (n - 1) b)
 
-let _ = assert (foldn (fun x y -> x*y) 5 1 = 5 * 4 * 3 * 2 * 1);;
-let _ = assert (foldn (fun x y -> x-y) 5 1 = 5 - (4 - (3 - (2 - 1))));;
+   let _ = assert (foldn (fun x y -> x*y) 5 1 = 5 * 4 * 3 * 2 * 1 * 1);;
+   let _ = assert (foldn (fun x y -> x-y) 5 0 = 5 - (4 - (3 - (2 - (1 - 0)))));;
 
 (* Problem 2d.
    Implement the clone function from Homework 1 as a single call to
    foldn.
  *)
 
+let clone e n = foldn (fun x y -> e :: y) n []
+
+let _ = assert (clone 'a' 5 = ['a';'a';'a';'a';'a'])
+
 (* Problem 2e.
    Implement fibsFrom from Homework1 as a single call to foldn.
  *)
+
+let fibsFrom n = foldn (fun x y -> match y with
+| [0] -> [1;0]
+| hd::mid::tl -> (hd + mid)::y
+                                       ) n [0]
+
+let _ = assert (fibsFrom 5 =  [5; 3; 2; 1; 1; 0])
 
 (************************************************************************
  * Problem 3: Dictionaries.
@@ -188,6 +199,17 @@ let _ = assert (foldn (fun x y -> x-y) 5 1 = 5 - (4 - (3 - (2 - 1))));;
    get1: 'a -> ('a * 'b) list -> 'b option
  *)  
 
+let empty1() : ('a * 'b) list = [] 
+
+let put1 = fun a b d -> (a, b)::d 
+
+let get1 = fun key d -> let tuple = filter (fun (x, y) -> x = key) d in match tuple with
+| [] -> None
+| (a, b)::tl -> Some b 
+
+let _ = assert (get1 "a" (put1 "a" 5 (empty1())) = Some 5)
+
+
 (* Problem 3b.
 
    Our second implementation of a dictionary uses a new datatype 
@@ -209,6 +231,23 @@ let _ = assert (foldn (fun x y -> x-y) 5 1 = 5 - (4 - (3 - (2 - 1))));;
  *)  
     
 type ('a,'b) dict2 = Empty | Entry of 'a * 'b * ('a,'b) dict2
+
+let empty2() = Empty 
+
+let put2 = fun a b d -> Entry (a, b, d)
+
+let get2 = 
+   fun key d ->
+      let rec search = 
+         fun key d ->
+         match d with
+         | Empty -> None
+         | Entry (a, b, _) when a = key -> Some b
+         | Entry (_, _, d') -> search key d'
+      in search key d
+
+let _ = assert (get2 "a" (put2 "a" 5 (empty2())) = Some 5)
+
     
 (* Problem 3c
 
@@ -248,3 +287,10 @@ type ('a,'b) dict2 = Empty | Entry of 'a * 'b * ('a,'b) dict2
 
 type ('a,'b) dict3 = ('a -> 'b option)
 
+let empty3() = fun a -> None
+
+let put3 = fun key value dict -> fun otherKey -> if otherKey = key then Some value else dict otherKey
+
+let get3 = fun key dict -> dict key
+
+let _ = assert (get3 "a" (put3 "a" 5 (empty3())) = Some 5)
