@@ -59,14 +59,11 @@ let _ = assert (unzip [(1,'a');(2,'b')] = ([1;2], ['a';'b']));;
  *)
 
 let encode : 'a list -> (int * 'a) list = 
-   fun lst -> fold_right (fun x y ->
-      if y = []
-      then (1, x)::y 
-      else let (a,b)::tl = y in 
-         if b = x 
-         then (a+1,b)::tl 
-         else (1,x)::y 
-                              ) lst []
+   fun lst -> fold_right (fun x y -> match y with
+      | [] -> (1, x):: y
+      | (a,b)::tl when b = x -> (a+1, b)::tl
+      | _ -> (1,x)::y
+            ) lst []
 
 let _ = assert (encode ['a';'a';'a';'b';'c';'c'] = [(3,'a');(1,'b');(2,'c')]);;
 
@@ -75,7 +72,7 @@ let _ = assert (encode ['a';'a';'a';'b';'c';'c'] = [(3,'a');(1,'b');(2,'c')]);;
  *)
 
 let intOfDigits : int list -> int =
-   fun lst -> fold_left (fun x y-> y + (x * 10 )) 0 lst
+   fun lst -> fold_left (fun x y -> y + (x * 10 )) 0 lst
 
 let _ = assert (intOfDigits [1;2;3] = 123)
 
@@ -95,7 +92,7 @@ let _ = assert (intOfDigits [1;2;3] = 123)
  *)
 
 let rec map2 : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list = 
-   function f -> function l1 -> function l2 -> match (l1,l2) with
+   fun f l1 l2-> match (l1,l2) with
    | ([], _) -> []
    | (_, []) -> []
    | (hd1::tl1, hd2::tl2) -> (f hd1 hd2)::(map2 f tl1 tl2)
@@ -133,7 +130,7 @@ let _ = assert (zip [1;2] ['a';'b']  = [(1,'a');(2,'b')]);;
  *)
 
 let rec foldn : (int -> 'a -> 'a) -> int -> 'a -> 'a = 
-   fun f -> function n -> fun b -> match n with
+   fun f n b -> match n with
    | 0 -> b
    | _ -> f n (foldn f (n - 1) b)
 
@@ -155,7 +152,8 @@ let _ = assert (clone 'a' 5 = ['a';'a';'a';'a';'a'])
 
 let fibsFrom n = foldn (fun x y -> match y with
 | [0] -> [1;0]
-| hd::mid::tl -> (hd + mid)::y
+| hd::mid::_ -> (hd + mid)::y
+| _ -> [-1]
                                        ) n [0]
 
 let _ = assert (fibsFrom 5 =  [5; 3; 2; 1; 1; 0])
@@ -201,12 +199,12 @@ let _ = assert (fibsFrom 5 =  [5; 3; 2; 1; 1; 0])
  *)  
 
 let empty1() : ('a * 'b) list = [] 
-
-let put1 = fun a b d -> (a, b)::d 
-
-let get1 = fun key d -> let tuple = filter (fun (x, y) -> x = key) d in match tuple with
-| [] -> None
-| (a, b)::tl -> Some b 
+let put1 = fun key value dict -> (key, value)::dict 
+let get1 = fun key dict -> 
+   let tuple = filter (fun (x, y) -> x = key) dict in 
+      match tuple with
+      | [] -> None
+      | (_, b)::_ -> Some b 
 
 let _ = assert (get1 "a" (put1 "a" 5 (empty1())) = Some 5)
 
@@ -234,18 +232,16 @@ let _ = assert (get1 "a" (put1 "a" 5 (empty1())) = Some 5)
 type ('a,'b) dict2 = Empty | Entry of 'a * 'b * ('a,'b) dict2
 
 let empty2() = Empty 
-
-let put2 = fun a b d -> Entry (a, b, d)
-
+let put2 = fun key value dict -> Entry (key, value, dict)
 let get2 = 
-   fun key d ->
+   fun key dict ->
       let rec search = 
-         fun key d ->
-         match d with
+         fun key dict ->
+         match dict with
          | Empty -> None
          | Entry (a, b, _) when a = key -> Some b
-         | Entry (_, _, d') -> search key d'
-      in search key d
+         | Entry (_, _, dict') -> search key dict'
+      in search key dict
 
 let _ = assert (get2 "a" (put2 "a" 5 (empty2())) = Some 5)
 
@@ -288,10 +284,26 @@ let _ = assert (get2 "a" (put2 "a" 5 (empty2())) = Some 5)
 
 type ('a,'b) dict3 = ('a -> 'b option)
 
+(* Should map any possible value to None... *)
 let empty3() = fun a -> None
 
-let put3 = fun key value dict -> fun otherKey -> if otherKey = key then Some value else dict otherKey
+(* 
+   Need a way of creating functions...
+   When function called with key (get method) need to return Some value associated to key...
+   Maybe nested functions? -> outer corresponds to put and the inner the dict itself?
+   Model after:
+      function s ->
+       match s with
+       | "hello" -> Some 5
+       | _ -> None
+*)
+let put3 = fun key value dict ->
+   fun otherKey -> 
+      match otherKey with
+      | key' when key' = key -> Some value
+      | _ -> dict otherKey
 
+(* Dictionary is a function, therefore just call dictionary on the key given... *)
 let get3 = fun key dict -> dict key
 
 let _ = assert (get3 "a" (put3 "a" 5 (empty3())) = Some 5)
