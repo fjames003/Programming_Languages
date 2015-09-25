@@ -18,11 +18,15 @@ let concat (l : string list) : string =
 	fold_right (fun x y -> x ^ y) l ""
 ;;
 
+let _ = assert (concat ["Hello, "; "World!"] = "Hello, World!")
+
 let fold_left = List.fold_left;;
 
 let concat (l : string list) : string = 
 	fold_left (fun x y -> x ^ y) "" l
 ;;
+
+let _ = assert (concat ["Hello, "; "World!"] = "Hello, World!")
 
 (* --------------------------------------- *)
 
@@ -30,11 +34,25 @@ let reverse (l : 'a list) : 'a list =
 	fold_left (fun x y -> y :: x) [] l
 ;;
 
+let _ = assert (reverse [1;2;3] = [3;2;1])
+
+let reverse (l : 'a list) : 'a list = 
+	fold_right (fun x y -> y @ [x]) l []
+
+let _ = assert (reverse [1;2;3] = [3;2;1])
+
 (* --------------------------------------- *)
 
 let map f l =
 	fold_right (fun x y -> (f x)::y) l []
 ;;
+
+let _ = assert (map (fun x -> x + 1) [1;2;3] = [2;3;4])
+
+let map f l = 
+	fold_left (fun x y -> x @ [(f y)]) [] l
+
+let _ = assert (map (fun x -> x + 1) [1;2;3] = [2;3;4])
 
 
 (* --------------------------------------- *)
@@ -48,6 +66,49 @@ let filter f l =
 				) l []
 ;;
 
+let _ = assert (filter (fun x -> x > 0) [-1;0;1;2] = [1;2])
+
+let filter f l =
+	fold_left (
+		fun x y ->
+		if f y
+		then x @ [y]
+		else x
+	) [] l
+
+let _ = assert (filter (fun x -> x > 0) [-1;0;1;2] = [1;2])
+
+(* --------------------------------------- *)
+
+(* Exercise: Same as above but for "uniqify",
+ which removes duplicate elements from a sorted int list.
+ You can assume the input list is sorted, 
+ and you must output a sorted list. 
+ HINT: one of your implementations may need to use last from hw1.
+*)
+
+let uniqify : int list -> int list = fun l -> fold_right (fun x y -> match y with
+	| [] -> x::[]
+	| hd::_ when hd = x -> y
+	| _ -> x::y 
+	) l []
+
+let _ = assert (uniqify [1;2;2;2;3;4] = [1;2;3;4])
+
+let uniqify : int list -> int list = fun l -> fold_left (fun x y ->
+	let rec last (l: 'a list) : 'a option =
+	  match l with
+	  | [] -> None
+	  | hd::[] -> Some hd
+	  | hd::tl -> last tl in
+ match x with
+	| [] -> x @ [y]
+	| _::_ when Some y = last x -> x
+	| _ -> x @ [y]
+	) [] l
+
+let _ = assert (uniqify [1;2;2;2;3;4] = [1;2;3;4])
+
 (* --------------------------------------- *)
 
 let rec fold_right f lst initial = 
@@ -55,9 +116,13 @@ let rec fold_right f lst initial =
 	| [] -> initial
 	| hd::tl -> f hd (fold_right f tl initial)
 
+let _ = assert (fold_right (+) [1;2;3] 0 = 6)
+
 (* --------------------------------------- *)
 
 let rec fold_left f initial lst = 
 	match lst with
 	| [] -> initial
 	| hd::tl -> fold_left f (f initial hd) tl
+
+let _ = assert (fold_left (+) 0 [1;2;3] = 6)
