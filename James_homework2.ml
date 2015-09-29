@@ -150,6 +150,11 @@ let _ = assert (clone 'a' 5 = ['a';'a';'a';'a';'a'])
    Implement fibsFrom from Homework1 as a single call to foldn.
  *)
 
+(*
+   The wildcard case is just because
+   I was getting a warning for not 
+   matching [], I wanted it to go away.
+*)
 let fibsFrom n = foldn (fun x y -> match y with
 | [0] -> [1;0]
 | hd::mid::_ -> (hd + mid)::y
