@@ -1,6 +1,6 @@
-(* Name:
+(* Name: Frankie James
 
-   UID:
+   UID: 919840157
 
    Others With Whom I Discussed Things:
 
@@ -56,10 +56,13 @@ let tester (nm : string) (thunk : unit -> 'a) (expected : 'a or_exception) =
 *)
 let rec patMatch (pat:mopat) (value:movalue) : moenv =
   match (pat, value) with
-      (* an integer pattern matches an integer only when they are the same constant;
-	 no variables are declared in the pattern so the returned environment is empty *)
-      (IntPat(i), IntVal(j)) when i=j -> Env.empty_env()
-    | _ -> raise (ImplementMe "patMatch")
+      (IntPat(i), IntVal(j)) when i=j   -> Env.empty_env()
+    | (BoolPat(b), BoolVal(d)) when b=d -> Env.empty_env()
+    | (WildcardPat, _)                  -> Env.empty_env()
+    | (VarPat(nm), _)                   -> Env.add_binding nm value (Env.empty_env())
+    | (NilPat, NilVal)                  -> Env.empty_env()
+    | (ConsPat(x,y), ConsVal(a,b))      -> Env.combine_envs (patMatch x a) (patMatch y b)   
+    | _ -> raise MatchFailure
 
 
 (* patMatchTest defines a test case for the patMatch function.
@@ -122,7 +125,9 @@ List.map patMatchTest patMatchTests;;
    raise the MatchFailure exception.
  *)
 let rec matchCases (value : movalue) (cases : (mopat * moexpr) list) : moenv * moexpr =
-  raise (ImplementMe "matchCases")
+  match cases with 
+  | []           -> raise MatchFailure
+  | (p1, e1)::tl -> try (patMatch p1 value, e1) with _ -> matchCases value tl
 
 (* We'll use these cases for our tests.
    To make it easy to identify which case is selected, we make
@@ -176,9 +181,38 @@ let tieTheKnot nm v =
 *)
 let rec evalExpr (e:moexpr) (env:moenv) : movalue =
   match e with
-    (* an integer constant evaluates to itself *)
-    IntConst(i) -> IntVal(i)
-  | _ -> raise (ImplementMe "evalExpr")
+      IntConst(i)              -> IntVal(i)
+    | BoolConst(b)             -> BoolVal(b)
+    | Nil                      -> NilVal
+    | Var(v)                   -> (try (Env.lookup v env) with _ -> raise (DynamicTypeError "Variable not found in environment"))
+    | BinOp(e1, op, e2)        -> (match (evalExpr e1 env, op, evalExpr e2 env) with
+                                  | (IntVal i1, Plus, IntVal i2)  -> IntVal(i1 + i2)
+                                  | (IntVal i1, Minus, IntVal i2) -> IntVal(i1 - i2)
+                                  | (IntVal i1, Times, IntVal i2) -> IntVal(i1 * i2)
+                                  | (IntVal i1, Eq, IntVal i2)    -> BoolVal(i1 = i2)
+                                  | (IntVal i1, Gt, IntVal i2)    -> BoolVal(i1 > i2)
+                                  | (a, Cons, NilVal)             -> ConsVal(a, NilVal)
+                                  | (a, Cons, ConsVal(x,y))       -> ConsVal(a, ConsVal(x,y))
+                                  | (_,_,_)                       -> raise (DynamicTypeError "Expressions for operator did not match.")
+                                  )
+  | Negate n                   -> (match evalExpr n env with
+                                  | IntVal i -> IntVal(-i)
+                                  | _        -> raise (DynamicTypeError "Can only negate integers")
+                                  )
+  | If (e1, e2, e3)            -> (match evalExpr e1 env with
+                                  | BoolVal true  -> evalExpr e2 env
+                                  | BoolVal false -> evalExpr e3 env
+                                  | _             -> raise (DynamicTypeError "If expected a BoolVal as a condition")
+                                  )
+  | Fun (p1, e1)               -> FunVal(None, p1, e1, env)
+  | FunCall (e1, e2)           -> (match (evalExpr e1 env, evalExpr e2 env) with
+                                  | (FunVal(_, p1, fbody, fenv), mval)   -> let newEnv = Env.combine_envs fenv (patMatch p1 mval) in evalExpr fbody newEnv
+                                  | (_,_)                                -> raise MatchFailure
+                                  )
+  | Match (e1, l1)             -> let (env', e2) = (matchCases (evalExpr e1 env) l1) in evalExpr e2 env'
+  | Let (nm, defn, body)       -> let env' = Env.combine_envs env (patMatch nm (evalExpr defn env)) in evalExpr body env'
+  | LetRec (nm, Fun(x,y), e2)  -> let env' = Env.add_binding nm (evalExpr (Fun(x,y)) env) env in evalExpr e2 env'
+  | _                          -> raise MatchFailure
 
 (* evalExprTest defines a test case for the evalExpr function.
    inputs: 
@@ -187,6 +221,7 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
      - expected: the expected result of running (evalExpr expr [])
                  (either a value or an exception)
  *)
+
 let evalExprTest (nm,expr,expected) = 
   tester ("evalExpr:" ^ nm) (fun () -> evalExpr expr []) expected
 
@@ -194,14 +229,17 @@ let evalExprTest (nm,expr,expected) =
       ADD YOUR OWN!
  *)
 let evalExprTests = [
-    ("IntConst",    IntConst 5,                              Value (IntVal 5))
-  ; ("BoolConst",   BoolConst true,                          Value (BoolVal true))
-  ; ("Plus",        BinOp(IntConst 1, Plus, IntConst 1),     Value (IntVal 2))
-  ; ("BadPlus",     BinOp(BoolConst true, Plus, IntConst 1), Exception (DynamicTypeError "You should change this to be a more informative message"))
-  ; ("Let",         Let(VarPat "x", IntConst 1, Var "x"),    Value (IntVal 1))
-  ; ("Fun",         FunCall(
-			Fun(VarPat "x", Var "x"),
-			IntConst 5),                         Value (IntVal 5))
+    ("IntConst",    IntConst 5,                                    Value (IntVal 5))
+  ; ("BoolConst",   BoolConst true,                                Value (BoolVal true))
+  ; ("Plus",        BinOp(IntConst 1, Plus, IntConst 1),           Value (IntVal 2))
+  ; ("BadPlus",     BinOp(BoolConst true, Plus, IntConst 1),       Exception (DynamicTypeError "Expressions for operator did not match."))
+  ; ("Negate",      Negate(IntConst 5),                            Value (IntVal(-5)))
+  ; ("BadNegate",   Negate(BoolConst true),                        Exception (DynamicTypeError "Can only negate integers"))
+  ; ("IfBranch1",   If(BoolConst true, IntConst 1, IntConst 2),    Value(IntVal 1))
+  ; ("IfBranch2",   If(BoolConst false, IntConst 1, IntConst 2),   Value(IntVal 2))
+  ; ("BadIf",       If(IntConst 1, IntConst 1, IntConst 1),        Exception (DynamicTypeError "If expected a BoolVal as a condition"))
+  ; ("Let",         Let(VarPat "x", IntConst 1, Var "x"),          Value (IntVal 1))
+  ; ("Fun",         FunCall(Fun(VarPat "x", Var "x"), IntConst 5), Value (IntVal 5))
   ]
 ;;
 

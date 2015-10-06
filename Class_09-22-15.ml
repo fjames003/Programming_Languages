@@ -1,4 +1,5 @@
 let map = List.map
+let filter = List.filter
 
 let rec prependTo : 'a list -> 'a list -> 'a list = 
 	function l1 -> function l2 -> l2 @ l1
