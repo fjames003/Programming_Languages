@@ -184,7 +184,7 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
       IntConst(i)              -> IntVal(i)
     | BoolConst(b)             -> BoolVal(b)
     | Nil                      -> NilVal
-    | Var(v)                   -> (try (Env.lookup v env) with _ -> raise (DynamicTypeError "Variable not found in environment"))
+    | Var(v)                   -> (try (Env.lookup v env) with _ -> raise (DynamicTypeError ("Variable not found in environment: " ^ v) ))
     | BinOp(e1, op, e2)        -> (match (evalExpr e1 env, op, evalExpr e2 env) with
                                   | (IntVal i1, Plus, IntVal i2)  -> IntVal(i1 + i2)
                                   | (IntVal i1, Minus, IntVal i2) -> IntVal(i1 - i2)
@@ -206,12 +206,17 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                                   )
   | Fun (p1, e1)               -> FunVal(None, p1, e1, env)
   | FunCall (e1, e2)           -> (match (evalExpr e1 env, evalExpr e2 env) with
-                                  | (FunVal(_, p1, fbody, fenv), mval)   -> let newEnv = Env.combine_envs fenv (patMatch p1 mval) in evalExpr fbody newEnv
-                                  | (_,_)                                -> raise MatchFailure
+                                  | (FunVal(None, p1, fbody, fenv), mval)    -> let newEnv = Env.combine_envs fenv (patMatch p1 mval) in evalExpr fbody newEnv
+                                  | (FunVal(Some nm, p1, fbody, fenv), mval) -> 
+                                      let newEnv = Env.combine_envs 
+                                      (Env.add_binding nm (FunVal(Some nm, p1, fbody, fenv)) fenv) 
+                                      (patMatch p1 mval) 
+                                      in evalExpr fbody newEnv
+                                  | (_,_)                                    -> raise MatchFailure
                                   )
-  | Match (e1, l1)             -> let (env', e2) = (matchCases (evalExpr e1 env) l1) in evalExpr e2 env'
+  | Match (e1, l1)             -> let (env', e2) = (matchCases (evalExpr e1 env) l1) in evalExpr e2 (Env.combine_envs env' env)
   | Let (nm, defn, body)       -> let env' = Env.combine_envs env (patMatch nm (evalExpr defn env)) in evalExpr body env'
-  | LetRec (nm, Fun(x,y), e2)  -> let env' = Env.add_binding nm (evalExpr (Fun(x,y)) env) env in evalExpr e2 env'
+  | LetRec (nm, Fun(x,y), e2)  -> let env' = Env.add_binding nm (tieTheKnot nm (evalExpr (Fun(x,y)) env)) env in evalExpr e2 env'
   | _                          -> raise MatchFailure
 
 (* evalExprTest defines a test case for the evalExpr function.
