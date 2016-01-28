@@ -1,0 +1,251 @@
+(*
+
+Notes about homework 2:
+
+  - You may not use any functions defined in other modules, or
+    built-in functions not covered in class. It is very easy to
+    violate the spirit of the problems! 
+
+  - Your homework should contain no syntax errors, type errors, or
+    failed assertions.  The only reliable way to ensure this is to run
+    it. 
+
+     - If you don't have an OCaml setup that works for you, email me
+       and I'll help you get something better.
+
+       Bare bones:
+         $ ocaml hw2.ml       -- Parse, typecheck, and run the file. 
+	                      -- All you really need.
+
+       REPL:
+         $ ocaml
+         # #use "hw2.ml";;    -- Allows you to interact with your code.
+
+         $ rlwrap ocaml       -- Allows you scroll back through input history
+	                      -- Google rlwrap.
+         
+
+       IDE-like stuff:
+         ocaml-top            -- Ocaml interactive editor
+	                      -- http://www.typerex.org/ocaml-top.html
+
+         tuareg-mode          -- What I use in class.
+			      -- https://github.com/ocaml/tuareg
+	                      -- For Emacs users; requires some setup.
+			      -- I can help.
+       
+
+  - All work must be your own. Do not look at each other's code.  Do
+    not look for solutions online! If you get stumped, email me for a
+    hint or come to office hours.
+
+  - Style: use pattern matching whenever possible. Do not give names
+    to values unless you are going to refer to them later. Use _
+    instead. On the other hand, give a name to a computation instead
+    of computing it twice.
+
+  - Coverage: Every (sub)expression of your code should be evaluated
+    for at least one test.
+
+      In particular, you will lose points if you have any "dead code"
+      that can never be executed.
+
+      Simple example:
+	if x > 0 then E1
+	else if x <= 0 then E2
+	else E3                   (* We can never reach E3 *)
+      
+      The conditions (x > 0) and (x <= 0) are exhaustive. One of these
+      will always be true.
+
+    Why did I ask you to do this?	
+    
+      It makes you think about how your code is going to run. If you
+      can't understand your own code, simplify it.
+
+  - This stuff will affect your grade.
+
+ *)
+
+(*
+
+1) Define a curried function prependTo that satisfies:
+
+   let prependTo : 'a list -> 'a list -> 'a list = TODO
+
+   prependTo [] l = l
+   prependTo [1;2;3] [4;5;6] = [4;5;6;1;2;3]
+
+   let f = prependTo [1] 
+   in f [2;3] @ f [4;5]
+    = 
+   [2; 3; 1; 4; 5; 1]
+
+ *)
+
+let prependTo l2 l1 = l1 @ l2;;
+let _ = prependTo [2;3] [1;2];;
+
+let prependTo : 'a list -> 'a list -> 'a list = 
+  fun l2 l1 -> l1 @ l2;;
+
+let prependTo : 'a list -> 'a list -> 'a list = 
+  fun l2 -> fun l1 -> l1 @ l2;;
+
+(* Difference between "fun" and "function" 
+ *)
+
+let listType =
+  function [] -> "nil"
+    | _ :: _  -> "cons"
+ ;;
+
+let listType = fun l ->
+  match l with
+    | [] -> "nil"
+    | _ :: _  -> "cons"
+ ;;
+
+
+let add x y = x + y;;
+let add5 = add 5;;
+let _ = add 3 3;;
+let _ = add5 1;;
+
+
+(*
+   Q: What does curried mean?
+   
+   - Pass arguments one at a time, instead of in a tuple.
+   - Higher-order functions. Each time we pass in one argument,
+     we get a new function.
+   - Allows a function to be applied to some, but not all, arguments.
+     Very useful in FP!
+ *)
+
+
+(* 
+
+2) Use map to define a curried function mapBinOp that takes a (also
+   curried) binary function and a list of pairs, and applies the
+   function to the components of each pair:
+
+ *)
+
+let map = List.map;;
+
+let mapBinOp : ('a -> 'b -> 'c) -> ('a * 'b) list -> 'c list = 
+  fun f l ->
+  map (fun (x,y) -> f x y) l
+;;
+
+let _ = mapBinOp (fun x y -> x+y) [(1,2); (3,4); (5,6)] = [3;7;11]
+
+let _ = mapBinOp prependTo [([1],[2;3]); ([4;5],[6;7])] = [[2;3;1]; [6;7;4;5]]
+
+let _ = mapBinOp (+) [(1,2); (3,4); (5,6)] = [3;7;11]
+
+(* 
+
+Rules:
+  map f []      = []                   (* Nil rule *)
+  map f (x::xs) = f x :: map f xs      (* Cons rule *)
+
+   mapBinOp (+) [(1,2); (3,4); (5,6)]
+ = map (fun (x,y) -> (+) x y) [(1,2); (3,4); (5,6)]
+ = map (fun (x,y) -> x + y) [(1,2); (3,4); (5,6)]
+ = map (fun (x,y) -> x + y) ((1,2) :: (3,4) :: (5,6) :: [])
+ = ((fun (x,y) -> x + y) (1,2))
+     :: 
+   map (fun (x,y) -> x + y) ((3,4) :: (5,6) :: [])
+ = (1 + 2)
+     :: 
+   map (fun (x,y) -> x + y) ((3,4) :: (5,6) :: [])
+ = ...
+ = (1 + 2) :: (3 + 4) :: (5 + 6) :: []
+ *)
+
+let myOwnShortcut = (+);;
+
+let _ = (-);;
+let _ = ( * );;
+
+
+let uncurriedAdd = (fun (x,y) -> x + y);;
+let curriedAdd = (fun x y -> x + y);;
+
+let curry   : (('a * 'b) -> 'c) ->
+              ('a -> 'b -> 'c)
+   = fun (f : ('a * 'b) -> 'c) ->
+
+     (* Return value :  ('a -> 'b -> 'c) *)
+     fun (x : 'a) -> fun (y : 'b) ->
+     f (x,y)
+		     
+let uncurry : ('a -> 'b -> 'c) ->
+	      (('a * 'b) -> 'c)
+   =
+   fun (f : ('a -> 'b -> 'c)) -> fun ((x,y) : ('a * 'b)) -> (f x y)
+   
+(* uncurriedAdd = uncurry curriedAdd *)
+(* curriedAdd = curry uncurriedAdd *)
+
+
+let mapBinOp : ('a -> 'b -> 'c) -> ('a * 'b) list -> 'c list = 
+  fun f l ->
+  map (uncurry f) l
+;;
+
+let uncurriedAdd = (fun (x,y) -> x + y);;
+let add5 = curry uncurriedAdd 5;;
+let _ = add5 6;;
+
+(*
+map : applies a function to each element of a list (returns a new list)
+
+filter: takes a "predicate" and a list, returns a new list
+        containing the elements that satisfy the predicate 
+ *)
+
+let filter = List.filter;;
+let _ = filter (fun x -> x > 3) [4;2;5;3] = [4;5]
+
+(* Example: Using filter to test if a list contains some value.
+
+    contains 'c' ['a';'b';'c'] = true
+    contains 'd' ['a';'b';'c'] = false
+
+ *)
+
+let contains e l =
+  match (filter (fun x -> x = e) l) with
+  | _::_ -> true
+  | []   -> false
+
+(* Exercise: implement contains as a recursive function.
+ *)
+
+let rec filter p l =
+  match l with
+  | [] -> []
+  | hd :: tl when p hd -> hd :: filter p tl
+  | _  :: tl           -> filter p tl
+
+let rec filter p l =
+  match l with
+  | [] -> []
+  | hd :: tl ->
+    let tl' = filter p tl in
+    if p hd
+    then hd :: tl'
+    else tl'
+
+let rec filter p l =
+  match l with
+  | [] -> []
+  | hd :: tl ->
+    if p hd
+    then hd :: filter p tl
+    else filter p tl
+
+(* CELEBRATE *)

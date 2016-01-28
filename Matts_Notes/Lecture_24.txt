@@ -1,0 +1,368 @@
+Evaluation order (recap)
+
+-------------------- Begin EvalOrder.py --------------------
+def plus(x,y):
+  print("plus(%d,%d)" % (x,y))
+  return x + y
+
+def number(x):
+  print("number(%d)" % x)
+  return x
+
+print(plus(number(1), number(2) + number(3)))
+-------------------- End EvalOrder.py --------------------
+
+When we run `python3 EvalOrder.py`, what will be printed out?
+How can we predict?
+
+  General rule: to evaluate
+     E1(E2,...En)
+
+   evaluate E1 --> V1
+   evaluate E2 --> V2
+   evaluate E3 --> V3
+     ...
+   evaluate En --> Vn
+
+   Then do the call.
+
+  Same thing with operators like +:
+
+      E1 + E2
+
+  evaluate E1 --> V1
+  evaluate E2 --> V2
+
+  Claim: Consistent, predictable evaluation order is important in
+  imperative languages.
+
+  Why?
+   - Order in which side-effects occur matters!
+   - If we write two values to location x in a program,
+     x=24, x=99. which comes first? When we read from
+     x, which value will we get?
+
+But: not all expressions are eager.
+
+-------------------- Start Lazy.py --------------------
+import random
+
+def log(n):
+  print(n)
+  return n
+
+def choose():
+  c = random.choice([True, False])
+  print(c)
+  return c
+-------------------- End Lazy.py --------------------
+
+$ python3
+>>> from Lazy import *
+>>> x = choose() and choose() and choose() and choose()
+True
+False
+>>> x = choose() and choose() and choose() and choose()
+True
+True
+False
+>>> x = choose() and choose() and choose() and choose()
+False
+
+What's going on?
+
+the "and" operator is lazy.
+
+  (False and x) == False, no matter what x is.
+    called "short-circuiting".
+
+Same is true for the "or" operator:
+
+>>> x = choose() or choose() or choose() or choose()
+False
+False
+False
+True
+>>> x = choose() or choose() or choose() or choose()
+True
+>>> x = choose() or choose() or choose() or choose()
+False
+True
+
+  (True or x) == True, no matter what x is.
+
+Python's if-then-else expression (aka ternary operator) is also lazy:
+
+>>> x = log(1) if choose() else log(2)
+True
+1
+>>> x = log(1) if choose() else log(2)
+False
+2
+
+  - log(1) is the True branch. evaluated only if
+    choose() evaluates to True.
+  - log(2) is the False branch. evaluated only if
+    choose() evaluates to False.
+    
+if-then-else, and, or are built-in. Can we define our own lazy
+versions of these things?
+
+For example, the syntax of Python's if-then-else expression is weird.
+The true branch comes before the condition.  Let's define a function
+that reorders them in a reasonable way.
+
+def ifElse(b, e1, e2):
+  return e1 if b else e2
+
+>>> x = ifElse(choose(), log(1), log(2))
+False
+1
+2
+>>> x = ifElse(choose(), log(1), log(2))
+True
+1
+2
+
+No good! Eager evaluation dictates that both log(1) and log(2) are
+evaluated before the call the ifElse.
+
+Is there anything we can do?
+  - make the branches functions. they don't need arguments, so
+    they can be 0-argument functions.
+
+ifElse will call e1() or e2() depending on whether b is True or False:
+
+def ifElse(b, e1, e2):
+  return e1() if b else e2()
+
+>>> x = ifElse(choose(), lambda: log(1), lambda: log(2))
+True
+1
+>>> x = ifElse(choose(), lambda: log(1), lambda: log(2))
+False
+2
+
+Now we get the same behavior as using the if-then-else expression
+directly.
+
+These 0-argument functions are called "thunks", and this technique is called
+"thunking". Useful for controlling when a piece of code gets run.
+
+Controlling evaluation order allows you to roll your own control
+structures (loops, branching, pattern-matching etc).
+  - Some languages are designed to support this well (e.g. SmallTalk, Ruby).
+  - Most languages provide a few general-purpose built-in control structures.
+    Stuck with those.
+
+----------------------------------------
+Prolog
+----------------------------------------
+
+Download prolog:
+  http://www.swi-prolog.org
+
+Prolog Tutorial:
+  http://www.cpp.edu/~jrfisher/www/prolog_tutorial/contents.html
+
+A larger prolog book:
+  http://homepages.inf.ed.ac.uk/pbrna/prologbook/
+
+
+Alan Kay (inventer of OO programming):
+  from "how" to "what".
+  - describe what the results of computation should be,
+    instead of how to produce them.
+
+Prolog enables this kind of programming.
+  - Example:
+    - describe what it means for a list to be a
+      permutation of another list.
+    - Based on this, Prolog can:
+       - check if one list is a permutation of another.
+       - generate all permutations of a list.
+
+  - Example:
+    - describe what makes a solution to the
+      nqueens puzzle.
+    - automatically check, generate solutions.
+
+The idea is to use *logic* (in this case, a subset of
+first-order logic):
+  - declare things that are true (*facts*)
+  - declare ways to learn new facts (*inference rules*)
+  - programming then becomes simply asking what is true in this universe (*queries*)
+
+Developed in the 1970s for AI applications.
+
+Today the biggest applications are in big data and
+distributed computing.
+  - datalog: database query language based on prolog
+  - bloom: high-level distributed programming language
+
+Example:
+
+-------------------- Begin courses.pl --------------------
+prereq(cmsi281,cmsi185).  % Data Structures depends on Computer Programming
+prereq(cmsi282,cmsi281).  % Algorithms depends on Data Structures
+prereq(cmsi284,cmsi281).  % Systems Programming depends on Data Structures
+prereq(cmsi355,cmsi284).  % Networks and Internets depends on Systems Programming
+prereq(cmsi386,cmsi284).  % Programming Languages depends on Systems Programming
+prereq(cmsi387,cmsi284).  % Operating Systems depends on Systems Programming
+prereq(cmsi485,cmsi385).  % Artificial Intelligence depends on Theory of Computation
+prereq(cmsi485,cmsi386).  % Artificial Intelligence depends on Programming Languages
+prereq(cmsi486,cmsi386).  % Intro to Database Systems depends on Programming Languages
+prereq(cmsi486,cmsi387).  % Intro to Database Systems depends on Operating Systems
+-------------------- End courses.pl --------------------
+
+Prolog is a purely *symbolic* language:
+  - no primitive kinds of data in the language (almost)
+  - the data it acts upon are *symbolic constants* that you create
+  - it only knows what you tell it about these constants
+
+lowercase identifiers like cmsi281 and prereq are called *atoms*
+  - a kind of *term*
+  - NOT a variable.
+  
+each atom is an *uninterpreted constant*: nothing known about it
+except that it's equal to itself.
+
+some subset of atoms are treated as *predicates* -- functions that
+return true and false.
+  - just prereq in this case
+
+The above facts in courses.pl are similar to a SQL table called
+"prereq", with two columns:
+
+Table "prereq"
+  | course_id | prereq_id |
+  +-----------+-----------+
+  | cmsi281   | cmsi185   |
+  | cmsi282   | cmsi281   |
+  | cmsi284   | cmsi281   |
+  | cmsi355   | cmsi284   |
+  | cmsi386   | cmsi284   |
+  | cmsi387   | cmsi284   |
+  | cmsi485   | cmsi385   |
+  | cmsi485   | cmsi386   |
+  | cmsi486   | cmsi386   |
+  | cmsi486   | cmsi387   |
+  +-----------+-----------+
+
+Now start prolog by running `swipl` from the same directory where you
+saved courses.pl
+
+$ swipl
+?-
+
+The "?-" is the prolog prompt.
+
+First, load our courses facts into the interpreter.
+
+?- consult(courses).
+true.
+
+The interpreter answers *queries* using the facts in the database.
+    
+?- prereq(cmsi386, cmsi284).
+true.
+
+"prereq(cmsi386, cmsi284)." is true, because prolog saw that we
+declared it to be true in courses.pl.
+
+?- prereq(cmsi386, cmsi355).
+false.
+
+"prereq(cmsi386, cmsi355)." is false, because we did not declare it to
+be true in courses.pl.
+
+In the interpreter, "prereq(cmsi386, cmsi284)." is a *query*.  We are
+asking prolog if it is true.  In the courses.pl, the same code is a
+*fact*. We are declaring it to be true.
+
+Prolog programming in this class will have three phases:
+  - declare facts in a .pl file.
+  - load the facts into the interpreter (with consult).
+  - ask queries about the facts.
+
+How does prolog answer a query?
+
+Tries to *unify* the query against each fact.  If the query unifies
+against some fact, then the answer is "true.", else "false.".
+Unification is a form of pattern matching.  In Prolog, *all*
+computation is done by unification.
+  - we'll define unification precisely later
+  - a generalization of OCaml pattern matching!
+
+A query can be any term.  Things get more interesting when the query
+term contains variables, which are uppercase identifiers.
+
+?- prereq(cmsi386, X).
+
+ "find a prereq of cmsi386"
+
+ Now unification must find a binding for the variable X in the query
+ that makes the query match some fact.
+
+?- prereq(cmsi485, X).
+
+ If there is more than one correct binding, Prolog will find them
+ all.  Use ; to get the next one.
+
+No notion of arguments or results -- just depends on where the
+variables are.  Extremely flexible.  E.g., above we used prereq as a
+function from a course to those that have it as a prereq.  Can also go
+the other way.
+
+?- prereq(X, cmsi284).
+
+ "find a class that has cmsi284 as a prereq".
+ 
+Can even do both:
+
+?- prereq(X, Y).
+
+ "find me a class with a prereq".
+
+A variable appearing multiple places indicates equality (disallowed in
+ML).
+
+Find a course that is its own prerequisite.
+
+?- prereq(X,X)
+
+A query can be a comma-separated list of terms.  Treated as the
+logical conjunction (AND) of the terms.
+
+ "find two courses that have cmsi281 as a prereq"
+
+?- prereq(X, cmsi281), prereq(Y, cmsi281).
+
+ Note that duplicates are included -- X and Y can be instantiated to
+ the same thing.  We can fix that with the built-in \= predicate,
+ which means "does not unify".
+
+?- prereq(X, cmsi281), prereq(Y, cmsi281), X \= Y.
+
+ Still have the symmetric cases in there.
+
+ Note: there is no general negation operator.  E.g., can't easily ask
+ for all X that are not a prereq of cmsi386.  Prolog has an *open-world
+ assumption*: it knows what you tell it is true, but it does not
+ assume that everything else is false, just unknown.
+
+ Can get all answers as a set using setof:
+   setof(X, prereq(cmsi485, X), L).
+
+Seeing something interesting here:
+  - can have predicates as arguments to other predicates
+  - like higher-order functions in OCaml
+   
+ "find a course that has cmsi281 as a prereq and is itself a prereq of
+ cmsi386"
+
+?- prereq(X,cmsi281), prereq(cmsi386, X).
+
+ "find a course that is a prereq of a prereq of cmsi386"
+
+ - prereq(cmsi386, X), prereq(X, Y).

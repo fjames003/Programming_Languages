@@ -22,6 +22,11 @@ let replTests = [
     ^ "  0 -> 1 "
     ^ "| _ -> n * fact (n-1)",  "val fact = <fun>")
   ; ("fact 5",                  "val - = 120")
+  ; ( "let rec foldn = "
+    ^ "fun f -> fun n -> fun b -> match n with"
+    ^ " 0 -> b"
+    ^ "| _ -> f n (foldn f (n - 1) b)", "val foldn = <fun>")
+  ; ("(foldn (fun x -> fun y -> x * y) 5 1) = fact 5", "val - = true")
   ]
 
 (* The Test Harness

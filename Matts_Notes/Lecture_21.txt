@@ -1,0 +1,661 @@
+Review from last time:
+
+- List interface with get(index) method.
+- If not element at index, throw IndexOutOfBoundsException.
+--------------------------------------------------
+interface List {
+    void add(Integer e);
+    Integer get(int i);
+}
+
+class ArrayList implements List {
+    Integer[] elems;
+    ArrayList() {
+	elems = new Integer[0];
+    }
+
+    public void add(Integer e) {
+	// TODO
+    }
+    
+    public Integer get(int i) {
+	try {
+	    return elems[i];
+	} catch(ArrayIndexOutOfBoundsException e) {
+	    throw new IndexOutOfBoundsException("What were you thinking?");
+	}   
+    }
+}
+--------------------------------------------------
+
+We can add a client class to test this out:
+
+--------------------------------------------------
+class TestExceptions {
+    public static void main(String[] args) {
+	List l = new ArrayList();
+	l.get(5);
+    }
+}
+--------------------------------------------------
+
+When we run this, the unhandled exception halts the
+program and prints a stack trace:
+
+$ javac Exceptions.java
+$ java TestExceptions
+Exception in thread "main" java.lang.IndexOutOfBoundsException: What were you thinking?
+        at ArrayList.get(Exceptions.java:20)
+        at TestExceptions.main(Exceptions.java:28)
+
+  - tells us which exception type (java.lang.IndexOutOfBoundsException)
+  - the message "What were you thinking?"
+  - where we were in the program. not just the line number,
+    but the sequence of calls starting from main.
+  - useful for debugging
+  - better than SEGFAULT (which might happen in e.g. C/C++ for similar
+    example). not informative.
+
+We can use try/catch to handle the exception in the List client code:
+
+--------------------------------------------------
+	try {
+	    l.get(5);
+	} catch(Exception e) {
+	    System.out.println("Didn't get anything... " + e.getMessage());
+	}
+--------------------------------------------------
+
+This catch block will handle any exception. We can be more specific
+too, and just handle the IndexOutOfBoundsException:
+
+--------------------------------------------------
+	try {
+	    l.get(5);
+	} catch(IndexOutOfBoundsException e) {
+	    System.out.println("Didn't get anything... " + e.getMessage());
+	}
+--------------------------------------------------
+
+Now if any other exception is thrown, it won't be handled, and we'll
+get a stack trace. Can also add a separate catch block:
+
+n--------------------------------------------------
+	try {
+	    l.get(5);
+	} catch(IndexOutOfBoundsException e) {
+	    System.out.println("Didn't get anything... " + e.getMessage());
+	} catch(Exception e) {
+	    System.out.println("Not sure what happened... " + e.getMessage());
+	}	
+--------------------------------------------------
+
+Catch blocks matched in order: first to last. If the exception has
+type IndexOutOfBoundsException (or a subtype of it), execute first
+block.  Otherwise, go to the next block.  Java detects impossible
+catch blocks. If we swap the above catch blocks so Exception comes
+first, we won't ever use the IndexOutOfBoundsException block. Every
+IndexOutOfBoundsException is an Exception and so will be handled by
+the Exception block.
+
+--------------------------------------------------
+	try {
+	    l.get(5);
+	} catch(Exception e) {
+	    System.out.println("Not sure what happened... " + e.getMessage());
+	} catch(IndexOutOfBoundsException e) {
+	    System.out.println("Didn't get anything... " + e.getMessage());
+	}	
+--------------------------------------------------
+
+Java is smart enough to detect this and give a compiler error:
+
+--------------------------------------------------
+$ javac Exceptions.java
+Exceptions.java:32: error: exception IndexOutOfBoundsException has already been caught
+        } catch(IndexOutOfBoundsException e) {
+          ^
+1 error
+--------------------------------------------------
+
+   - Look familiar? OCaml warned us about redundant cases in match
+     expressions!
+
+If none of the catch blocks match, Java keeps walking back up the call
+chain, until it finds an applicable handler for the thrown exception.
+
+Use this to your advantage. Catch only those exceptions you know how
+to handle (i.e. recover from). Everything else is propagated to your
+caller.
+
+Note that variables common to the "try" and "catch" have to be
+declared outside.
+
+--------------------------------------------------
+        String status;
+	try {
+	    l.add("hey now");
+	    status = "cool.";
+	} catch(IndexOutOfBoundsException e) {
+	    status = "Out of bounds I guess... " + e.getMessage();
+	} catch(Exception e) {
+	    status = "Didn't work... " + e.getMessage();
+	}
+	System.out.println(status);
+--------------------------------------------------
+
+So far, this is all similar to ML's exceptions.  One issue with ML
+exceptions: how to know which exceptions might occur when I call a
+method?  This is a problem for callers.
+   - only recourse is to read the documentation
+   - then remember to catch all possible exceptions
+   - no help from the compiler
+
+Java has *checked exceptions*, which it can track at compile time to
+make sure you handle correctly. Each method is explicitly annotated
+with the set of checked exceptions it *may* throw.
+
+We can define our own (checked) exception type, and throw it instead
+of IndexOutOfBoundsException (which is unchecked).
+
+--------------------------------------------------
+class ListIndexOutOfBoundsException extends Exception {
+    ListIndexOutOfBoundsException() {
+	super();
+    }
+
+    ListIndexOutOfBoundsException(String msg) {
+	super(msg);
+    }
+}
+
+interface List {
+    void add(Integer e);
+    Integer get(int i);
+}
+
+class ArrayList implements List {
+    Integer[] elems;
+    ArrayList() {
+	elems = new Integer[0];
+    }
+
+    public void add(Integer e) {
+	// TODO
+    }
+    
+    public Integer get(int i) {
+	try {
+	    return elems[i];
+	} catch(ArrayIndexOutOfBoundsException e) {
+	    throw new ListIndexOutOfBoundsException("What were you thinking?");
+	}   
+    }
+}
+
+class TestExceptions {
+    public static void main(String[] args) throws Exception {
+	List l = new ArrayList();
+	String status;
+
+	try {
+	    l.get(5);
+	    status = "cool";
+	} catch(ListIndexOutOfBoundsException e) {
+	    status = "Out of bounds... " + e.getMessage();
+        } catch(Exception e) {
+	    status = "Something went wrong... " + e.getMessage();
+	} 
+
+	System.out.println(status);
+    }
+}
+--------------------------------------------------
+
+Now when we compile we get an error:
+
+--------------------------------------------------
+$ javac Exceptions.java 
+Exceptions.java:30: error: unreported exception ListIndexOutOfBoundsException; must be caught or declared to be thrown
+            throw new ListIndexOutOfBoundsException("What were you thinking?");
+            ^
+1 error
+--------------------------------------------------
+
+Since ListIndexOutOfBoundsException is a checked exception, we have to
+declare that ArrayList.get could throw it with a "throws clause":
+
+--------------------------------------------------
+    public Integer get(int i) throws ListIndexOutOfBoundsException {
+	try {
+	    return elems[i];
+	} catch(ArrayIndexOutOfBoundsException e) {
+	    throw new ListIndexOutOfBoundsException("What were you thinking?");
+	}   
+    }
+--------------------------------------------------
+
+Now we can try again:
+
+--------------------------------------------------
+$ javac Exceptions.java 
+Exceptions.java:26: error: get(int) in ArrayList cannot implement get(int) in List
+    public Integer get(int i) throws ListIndexOutOfBoundsException {
+                   ^
+  overridden method does not throw ListIndexOutOfBoundsException
+1 error
+--------------------------------------------------
+
+Yikes! Another compiler error! This says that ArrayList can't throw
+a ListIndexOutOfBoundsException because it is implementing a method
+List.get() that doesn't throw a ListIndexOutOfBoundsException.
+
+This makes sense from the client's point of view: if a client is
+programming against the List interface, it doesn't expect a
+ListIndexOutOfBoundsException to be thrown. If we then give it an
+ArrayList that could throw a ListIndexOutOfBoundsException, then it
+won't be handled. Defeats the whole point of checked exceptions in the
+first place.
+
+Ok, so let's make the compiler happy and add a throws clause to
+List.get() as well:
+
+--------------------------------------------------
+interface List {
+    void add(Integer e);
+    Integer get(int i) throws ListIndexOutOfBoundsException;
+}
+--------------------------------------------------
+
+Now java is happy and compiles our code. Thanks java.  Next, let's
+remove the try/catch block from main, so we have just:
+
+--------------------------------------------------
+    public static void main(String[] args) {
+	List l = new ArrayList();
+	l.get(5);
+    }
+--------------------------------------------------
+
+The compiler is unhappy again:
+
+--------------------------------------------------
+$ javac Exceptions.java 
+Exceptions.java:38: error: unreported exception ListIndexOutOfBoundsException; must be caught or declared to be thrown
+        l.get(5);
+             ^
+1 error
+--------------------------------------------------
+
+Ok ok, so we have to add a throws clause to main now. The throws
+clause tells us which methods could be thrown by the method or any
+methods that it calls (that we don't handle).
+
+--------------------------------------------------
+    public static void main(String[] args) throws ListIndexOutOfBoundsException {
+	List l = new ArrayList();
+	l.get(5);
+    }
+--------------------------------------------------
+
+Now it builds, and when we run we get a stack trace again for the
+unhandled exception:
+
+--------------------------------------------------
+$ java TestExceptions
+Exception in thread "main" ListIndexOutOfBoundsException: What were you thinking?
+        at ArrayList.get(Exceptions.java:30)
+        at TestExceptions.main(Exceptions.java:38)
+--------------------------------------------------	
+
+So checked exceptions are cool -- they give us reliable checked
+documentation about which exceptions might be thrown, and therefore
+which exceptions definitely will not be thrown!
+
+Functions can be declared to throw multiple Exception types:
+
+--------------------------------------------------
+class Error1 extends Exception {}
+class Error2 extends Exception {}
+
+interface Something {
+    void m() throws Error1, Error2;
+}
+
+class Client {
+    void test(Something x) throws Error1, Error2 {
+	x.m();
+    }
+}
+--------------------------------------------------
+
+We can handle each exception in the client method test.
+Suppose we handle just Error1:
+
+    void test(Something x) throws Error1, Error2 {
+        try {
+            x.m();
+	} catch(Error1 e) {
+	    // do stuff.
+	}
+    }
+
+Now we know that test will never throw Error1, and
+can remove it from the throws clause:
+
+    void test(Something x) throws Error2 {
+        try {
+            x.m();
+	} catch(Error1 e) {
+	    // do stuff.
+	}
+    }
+
+A method can be declared to throw more Exceptions than it actually
+does. It cannot throw more Exceptions than it is declared to throw.
+
+Java also has unchecked exceptions, which don't have to be declared in
+throws clauses. This is important because some kinds of exception
+could happen pretty much any time -- e.g NullPointerException or
+OutOfMemoryException.
+
+All unchecked exceptions extend a subclass of Exception called
+RuntimeException. We can define our own unchecked exceptions by
+extending RuntimeException instead of Exception.
+
+Pros of checked exceptions:
+  - statically (at compile time) rules out errors caused by
+    unhandled exceptions.
+  - makes error cases part of an object's interface.
+  
+Pros of unchecked exceptions:
+  - more flexible.
+  - avoids tedious boilerplate.
+
+Pretty much the same trade-offs as static vs dynamic type checking.
+
+=== Exceptions and state ===
+Have to be careful when stateful applications throw exceptions.
+Need to leave your program in a consistent state!
+     *Exception safety*
+
+Example:
+
+  void updateBoth() {
+      this.x = updateX();
+      this.y = updateY();
+   }
+
+Suppose updateY() throws an exception?
+  If we don't handle it it gets propagated to the caller.
+  this.x is updated (because we got to updateY())
+  this.y is *not* updated (because updateY() failed).
+
+How can we make sure that either *both* are updated or *neither* is
+updated?
+
+Back up old version of x and restore it if updateY throws an
+exception:
+
+   void updateBoth() {
+      X old_x = this.x;
+      this.x = updateX();
+      try {
+        this.y = updateY();
+      } catch(UpdateYException e) {
+        this.x = old_x;
+	throw e;
+      }
+   }
+
+Assumes updateX() and updateY() have no other effects that might
+need to be rolled back.
+
+Another example: You need to make sure you clean up your resources
+(e.g. file handles), regardless of failures.
+
+  void readFileAndCompute(InputStream is) {
+     String s = is.readString(); // not a real method
+     compute(s);
+     is.close();
+  }
+
+Catch any exception, close the file, then rethrow or handle the exception.
+
+  void readFileAndCompute(InputStream is) {
+     try {
+          String s = is.read();
+     	  compute(s);
+          is.close();
+     } catch(SomeException e) {
+          is.close();
+	  throw e;
+     }
+  }
+
+This works, but...
+  - duplicates the cleanup code
+  - requires manually re-throwing the exception
+
+Java's "finally" blocks can help:
+  - don't care about any exception; just make sure to clean up
+    when we're (either exit normally or with exception)
+     
+  void readFileAndCompute(InputStream is) {
+     try {
+          String s = is.read();
+     	  compute(s);
+     } finally {
+          is.close();
+     }
+  }
+
+Can also have catch blocks
+
+  void readFileAndCompute(InputStream is) {
+     try {
+          String s = is.read();
+     	  compute(s);
+     } catch(ComputeException e) {
+          System.out.println("compute failed...");
+     } finally {
+          is.close();
+     }
+  }
+
+Finally is always called before exiting the try/catch block.  Doesn't
+matter if we exit try normally, return from try early, try throws an
+exception that is unhandled, handled by a catch block that returns
+normally, etc. etc.
+
+--------------------------------------------------
+Concurrency and Parallelism
+ - Doing multiple things at the same time.
+ - Each "thing" is called a "thread of execution".
+   A program can have multiple threads, running concurrently.
+    or in parallel.
+ - Modern computers often have multiple *processors* or *cores*.
+   Each run one thread simultaneously (in parallel)
+ - Run programs faster by spreading work out over multiple
+   threads running on multiple cores.
+
+ - Memory, file handles, network connections, etc
+   are "shared resources". Each thread can access them.
+
+   +-------------------------------------------------------+
+   |                        Process                        |
+   |                                                       |
+   |                                                       |
+   |                    Shared Resources                   |
+   |     +--------------------------------------------+    |
+   |     |   Memory (Objects, etc.)                   |    |
+   |     |   File Handles                             |    |
+   |     |   Network Connections                      |    |
+   |     +--------------------------------------------+    |
+   |          |                 |             |            |
+   |     +----------+   +-------------+  +----------+      |
+   |     | Thread 1 |   | Thread 2    |  | Thread 3 |      |
+   |     |          |   |             |  |          |      |
+   |     | o.m()    |   | while(...)  |  | x = ...  |      |
+   |     | ...      |   |   ...       |  | ...      |      |
+   |     |          |   |             |  |          |      |
+   |     +----------+   +-------------+  +----------+      |
+   +-------------------------------------------------------+
+
+ - A program can have more threads than the number of cores,
+   or fewer threads than the number of cores.
+ - If more threads than cores, either *language runtime* or
+   the *operating system* will switch between them automatically
+   so they all make progress.
+
+            A       B        A                C
+        |-------| |---| |---------| |--------------------|
+      
+      ===== Time ===========================================>
+
+ - Key challenge in multi-thread programming is *coordination*.
+ 
+   - Access to shared resources (variables, data structures,
+     files, network connections, etc...)
+   - Need to prevent bad interactions between threads.
+
+     Example: word count
+       - input: a list of files
+       - output: a dictionary mapping each word (in any file)
+          to number of occurrences (in all files)
+       - parallelize: one file per thread. share the dictionary.
+
+        -----------------
+                 wc
+        -----------------
+              A                 B
+       +------------+    +------------+
+       | wc["hi"]++ |    | wc["hi"]++ | 
+       | ...        |    | ...        |
+       +------------+    +------------+
+
+
+    Suppose wc["hi"] == 0.
+    A runs for a bit, increments wc["hi"]. Now x=1.
+    B runs for a bit, increments wc["hi"]. Now x=2.
+
+    Problem: wc["hi"]++ is not a single instruction.
+
+                A                      B
+       +-------------------+  +-------------------+
+       | tmpA = wc["hi"]   |  | tmpB = wc["hi"]   |
+       | wc["hi"] = tmpA+1 |  | wc["hi"] = tmpB+1 |
+       | ...               |  | ...               |
+       +-------------------+  +-------------------+
+
+    Suppose wc["hi"] is 0
+    A executes first line. tmpA = 0
+    B executes both lines. wc["hi"] = 1
+    A executes second line. wc["hi"] = 1
+
+ - This can get *VERY* hairy. Lots of things can go wrong.
+
+ - Key challenges:
+   - Coordinate access to shared resources
+   - Communicate between threads (i.e. results of computation)
+
+ - Java provides lots of (relatively) simple classes that
+   can help.
+
+ - Some programs can be written without shared resources and with only
+   minimal coordination. Avoids a lot of problems. We will stick to
+   these.
+
+ - Example: sum List<List<Integer>> into a single Integer.
+
+   Idea:
+     1) sum each List<Integer> into a single Integer.
+        *** In parallel (one thread per List<Integer>) ***
+     2) once all the threads have finished,
+        add the partial sums.
+
+   No shared resources. Each thread works on its own list.
+   Minimal coordination: start summing a list, wait for it to finish.
+
+   Each partial sum in step 1 creates a "future": once the
+   work is done (some time in the future), the result will show
+   up in the future object.
+     Future<Integer>
+       -- An Integer that will appear some time in the future
+
+   One other detail to make this work: ForkJoinPool.
+     ForkJoinPool.submit()
+       -- give it a function to run, it sets up all the
+          thread stuff behind the scenes, just gives you
+	  a future object.
+
+------------------------------ Example: SumListOfLists --------------------
+
+import java.util.*;
+import java.util.concurrent.*;
+
+class SumListOfLists {
+    public static int sum(List<List<Integer>> lists) {
+	ForkJoinPool forkJoin = new ForkJoinPool();
+	List<Future<Integer>> futures = new LinkedList<Future<Integer>>();
+	
+	for(List<Integer> l : lists) {
+	    // submit: call a function in parallel
+	    // result is a *future*, which we can get() later.
+	    
+	    Future<Integer> f = forkJoin.submit(() -> {
+		    Integer result = 0;
+		    for(Integer i : l) {
+			result += i;
+		    }
+		    return result;
+		});
+
+	    // sum is now running; put into the list of futures so we
+	    // can start more.
+	    futures.add(f);
+	}
+
+	// we've started them all, so now wait for them to finish and
+	// collect the results.
+	
+        Integer sum = 0;
+	for(Future<Integer> f : futures) {
+	    try {
+		sum += f.get() + 1;
+	    } catch(Exception e) {
+		System.out.println(e);
+	    }
+	}
+	return sum;
+    }
+
+    public static void main(String[] args) {
+	List<List<Integer>> lists = new LinkedList<List<Integer>>();
+	for(int i = 0; i < 100; i++) {
+	    List<Integer> l = new LinkedList<Integer>();
+	    for(int j = 0; j < 100000; j++) {
+		l.add(j);
+	    }
+	    lists.add(l);
+	}
+
+	System.out.println(sum(lists));
+    }
+}
+
+--------------------------------------------------
+We can run this, and see that we're using multiple cores:
+
+$ time java SumListOfLists
+1778793664
+
+real    0m5.363s
+user    0m37.576s
+sys     0m0.654s
+
+
+"real" is the wall-clock elapsed time. The program finished in 5.363 seconds.
+
+"user" is the actual CPU work done by my 8-core laptop. 37.576s of work
+done in 5.363 seconds. Thanks parallelism!

@@ -1,0 +1,210 @@
+Homework 3:
+    solution thursday.
+
+  Midterm next Tuesday. 30% of grade.
+    - Review the lecture notes and homework solutions.
+    - The maximum score on the test will be 50 points.
+    - There will be 55 points available.
+    - You can get a perfect score without getting all available points.
+    - I will give partial credit.
+    - You will have to write code, but I will tolerate small syntax and type errors.
+   
+  Midterm topics: everything up to now.
+    - OCaml: Pattern matching, recursion, higher-order functions, user-defined types.
+    - The higher-order List functions: map, filter, fold_right, fold_left. (rules)
+    - Syntax (Grammars), Scope, Typing.
+    - Paradigms.
+
+
+--------------------
+ Disadvantages of static type checking
+--------------------
+ 
+  Example: heterogeneous lists.
+    List of int or bool
+
+  Differences between pattern matching and dynamic type checking:
+    - Number of constructors limited ---> have to decide which types can be
+      in your heterogeneous list.
+    - pattern matching can be exhaustive. Exhaustiveness check is helpful!
+      Can rule out possibility of match failure. Nothing like that for dyn TC.
+
+- Limitations of Static type checking:
+  - does not account for all possible run-time errors.
+    - pattern match failure.
+       let hd::tl = [];;
+    - 6/0;;
+
+  - A function type int -> int not check the *effects*
+    - some type systems can check effects as well:
+        "this function may use mutable memory"
+	"this function may use I/O" (filesystem, network, etc)"
+	"this function *can not* use mutable memory or I/O"
+          - powerful!
+
+  There's a wide spectrum of static type systems.
+  Ordered by how many kinds of errors can be ruled out statically.
+  Generally, more programmer effort required to rule out more errors.
+    - but often worth it for critical software.
+    - trade off!
+
+Dynamic Typechecking.
+  - wait until the last minute to check the types.
+  - only check *values*, never *expressions*
+  - Examples:
+     1 + false
+     false (1, "hello")
+
+  Key difference: functions
+    static: typecheck a function *once*, at compile time
+      a function of type int -> bool
+      - strong guarantee for all call sites: never will cause a type error
+      - the type is *abstraction* over the function.
+        our brains are very good at thinking in abstractions.
+
+    dynamic:  only check the function when it is invoked
+               - on demand as it executes
+               - only for the given actual args
+	       - only for the given execution path
+	       - can make no guarantees about later calls
+
+                to understand how to use a function, either need:
+		  - to study the code
+		  - a "large enough" set of examples/test cases
+		  - someone who already understands it to communicate with you
+		    e.g. documentation.
+
+    what if we pass in a bad argument (wrong type)?
+      - static: gives error about code *you wrote*
+      - dynamic: gives error about some bad state
+
+   Examples of dynamically typed languages?
+     Scheme/Lisp
+     Smalltalk
+     Prolog
+     Perl,Python,Ruby
+     JS, PHP
+
+Static is usually better for:
+  - large code base
+  - large team
+  - critical software
+
+
+Gradual Typing:
+    dynamic --> static/dynamic hybrid --> static 
+               (could stay here)        (can go all the way)
+
+  Dynamic is good for small projects, rapid iteration, exploring ideas.
+  
+  Static is good for large projects, or critical software.
+    - all projects start small
+    - no software starts critical (needs users)
+
+Examples of gradual typing:
+  - Scheme (Racket)
+  - Typescript (Microsoft)
+  
+
+- Strongly vs. Weakly typed
+      - strongly typed means the language *never* allows us to:
+      - use a value of one type as if it were a value of another type
+        e.g. adding two booleans
+      - access/manipulate its internal representation (memory bits).
+      - called "enforcing each type's abstraction".
+
+    - Examples of strong type systems:
+      ML, Python, Javascript
+
+    - Weak type system allows some type errors to go undetected.
+      - running in undefined state.
+      - C / C++
+
+    - Strongly typed languages ensure *memory safety*.
+      - no "dangling pointers"
+      - no out-of bounds array access
+        basis of "buffer overrun/overflow"
+      - no uninitialized variable.
+
+    - Strong typing requires run-time checks. (array-bounds, null pointer, dangling pointer, etc)
+
+    - How do languages prevent memory errors?
+      - Pointers implicit, no pointer arithmetic
+        let l = [1;2;3];;
+      - Automatic garbage collection.
+      - Things like array bounds checking.      
+
+    - Why is C weakly typed?
+      - at the time it was invented, cost of dynamic memory checks considered prohibitive
+      - best effort statically, but no dynamic checks for things like:
+	 - casts
+	 - array out-of-bounds accesses
+      - *arguably* still necessary today for "systems programming"
+	- but for most programs this is the wrong language to use!
+	
+    tradeoffs: strong typechecking costs more at run time, but *much*
+    safer
+    - popularized in the mainstream with Java, C#, scripting langs like JS and PHP
+    - everything but C and C++ today!
+
+--------------------
+  They both suffer from "type error phobia":
+    dynamic type errors are painful.
+    Really hard to debug.
+    What can we do instead?
+    Pretend they don't exist!
+    By automatically converting between types.
+
+
+    Just about every language you will ever use (other than C/C++) has
+    strong typing.
+
+    Many languages support this kind of automatic (or implicit) conversion
+    
+    Still qualifies as strong typing.
+
+    But can give rise to new hard-to-debug problems.
+
+
+    Some statically typed languages (notably scala) also do implicit
+    conversions.
+
+    The combination of implicit conversion and static typing can be
+    quite nice.
+      - Programmer can control the conversion process.
+      - Can define new implicit conversion.
+      - IDE can hilight which conversions will occur and where.
+
+
+
+  - for statically typed languages:  typechecking vs. type inference
+    - require explicit type annotations or infer types automatically?
+
+    - Java uses type checking. ML uses type inference.
+
+       fun x -> x + 1
+       
+    - ML requires writing fewer types. You can write them whenever you want to
+      (for readability, to help the type checker, etc).
+
+    - in practice, it's a spectrum
+      - e.g. even for explicit types, need only annotate variable
+	declarations, not every expression
+
+    - inference is less burden on the programmer and can infer more
+      precise types than would otherwise be used
+
+    - checking is better documentation and can better enforce user
+       requirements
+      - this function must only accept ints
+
+   static/strong/check:  Java
+   static/strong/infer:  ML
+   static/weak:    C
+
+   dynamic/strong:	 Lisp, Scheme, Prolog
+   dynamic/weak:	 
+     This is really "untyped" - no type checking at all (assembly)
+     "Use this as a memory address"
+     "Use this as an integer"
+     "Use this as a floating point"

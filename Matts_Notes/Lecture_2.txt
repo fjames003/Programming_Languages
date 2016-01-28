@@ -1,0 +1,218 @@
+First homework Friday. Due a week from Sunday.
+Exercise: try ocaml (try.ocamlpro.com)
+
+Homework due 11/7 is actually due 11/8.
+
+let x = 3 + 2
+
+let rec fact n =
+  match n with
+  | 0 -> 1
+  | _ -> n * fact (n-1)
+
+General form of match:
+  match exp with
+  | pat1 -> exp1
+  | ...
+  | patn -> expn
+
+Patterns (so far):
+  pat ::= num | _
+
+Lists:
+  [] (empty list aka "nil")
+  non-empty lists [1], [1;2;3]
+
+:: is called "cons"
+it adds a new element to the "head"
+of a list.
+
+Cons is functional:
+  let y = (1+2)::x
+  x is unchanged.
+
+The "head" of a non-empty list
+ is its first element
+The "tail" of a non-empty list
+  is everything else (the rest of
+  the list)
+
+Linked list in C:
+  struct Node {
+    int elem;
+    struct Node * next;
+  }
+  typedef struct Node * List;
+  // List = struct Node *
+
+A list is either:
+  a null pointer (empty list)
+  a non-null pointer to Node
+    (int and a List)
+
+  ASCII art: [1;2;3]
+  Node{1 -}--> Node{2 -}--> Node{3 null}
+
+In OCaml:
+A list is either
+  [] (empty list) (nil)
+  (head::tail)
+    (an element and a list)
+
+  Cons{1 -}--> Cons{2 -}--> Cons{3 -}--> []
+  
+Same idea, but OCaml is a "higher level" language (pointers are hidden).
+
+sumList uses a new pattern
+  (hd::tl)
+
+  Nested patterns.
+  Pattern for ::, patterns for
+  the head and the tail.
+
+  Variable patterns. hd and tl
+  are variable names.
+
+  | hd::tl -> hd + sumList tl
+
+Note: Ocaml is statically-type checked. So all branches of a match must have the same type. Also, all patterns must match the same type.
+
+(Expressions)
+E ::= C | X | if E then E else E
+    | let X=E
+    | match E with P1 -> E1
+      '|' P2 -> E2
+    | ...
+(Constants)
+C ::= 1,[]
+
+(Variables)
+X ::= <variables>
+
+(Patterns)
+P ::= C | _ | P::P | X
+
+Strategy for writing recursive Functions:
+  1) Think about the base case(s).
+     Usually the easy part.
+  2) Think about about the
+     recursive case(s).
+     Depends on the structure of
+     the data being traversed.
+     - Assume that the recursive
+       call(s) do the right thing.
+     - Combine the results.
+  3) Magically works!
+  
+everyOther : 'a list -> 'a list 
+  "polymorphic"
+  'a is a type variable.
+  We'll talk more about polymorphism (in OCaml and other languages) later.
+
+everyOther [1;2;3]
+everyOther ["";"hi";"bye"]
+  
+Sometimes we want to give names to intermediate values.
+
+New form of expression:
+   let P = E in E
+Let can do pattern matching too! You've seen this already, when I write "let _ = ..." in the examples.
+
+Note: let without "in" only allowed at the "top level"
+
+"Top level expression": an expression that is not a subexpression of any other (outer) expression.
+
+Tuples:
+  Like lists, contain multiple elements
+  Two differences:
+    Elements can have different types.
+    The type of a tuple tells you how many elements it has.
+
+  (1, "hi", 2.0)  has type  (int * string * float)
+  (1, "hi")       has type  (int * string) 
+
+
+Examples:
+========================================
+
+let ls = [1,""] (* Not a 2-element list *)
+let ls = [1;""] (* A 2-element list *)
+
+let x= [4;5]
+let y = (1+2) :: x
+let _ = x (* Functional: x is unchanged *)
+let _ = y (* y is a new list *)
+
+let rec sumList lst =
+  match lst with
+  | [] -> 0
+  | hd::tl -> hd + sumList tl
+
+let _ = sumList [1;2;3;4]			     
+
+let _ =
+  match [1;2;3] with
+  | 1::[] -> "[1]"
+  | 1::(2::(3::[])) -> "[1;2;3]"
+  | _ -> "?"
+
+let rec everyOther l =
+  match l with
+  | [] -> []
+  | [e] -> [e]
+  | hd::_::tl ->
+     hd :: everyOther tl
+
+let _ = everyOther [1;2;3;4;5]
+let _ = everyOther [1;2]
+let _ = everyOther [1;2;3;4;5;6;7]
+let _ =	everyOther []
+let _ = everyOther [1]
+
+(* Giving names to intermediate values. *)		   
+let quadruple x =
+  match double x with
+  | d -> d + d
+
+(* New expression: let P = E1 in E2
+   Like a match expression with only 1 case:
+
+  let P = E1 in E2 
+    can be written
+  match E1 with P -> E2
+ *)
+let quadruple x =
+  let d = double x
+  in d + d
+
+(* Nested lets *)
+let _ =
+  let x = 3+4 in
+  let y = 5+6 in
+  x + y
+
+(* Let expressions can be used anywhere
+   an expression can *)	
+let _ = 3 + (let x = 4+5 in x+6)
+
+(* Pattern [x;y;z] only matches a three-element list *)	      
+let [x;y;z] = [1;2;3]	      
+
+(* Run-time error: expected a three-element list,
+   got a two-element list *)
+let [x;y;z] = [1;2]
+
+(* These tuples have different types *)		
+let _ = (1, "hi", 2.0) 
+let _ = (1, "hi")		
+let _ = (1,1,1)
+
+(* Pattern matching on tuples *)
+let (a,b) = (1,"hi")
+
+(* The pattern must contain the right number of
+   elements, or else type error *)	      
+let (a,b) = (1,2,3)
+
+(* Nested pattern. *)
+let ((x,y), h::t) = ((1,2), [3;4])

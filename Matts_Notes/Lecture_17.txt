@@ -1,0 +1,158 @@
+Extra credit homework is now due next Tuesday.
+
+-------------------- Java --------------------
+
+Big ideas:
+
+Syntax is similar to Java.
+  - curly braces, semi-colons, if statements, return
+
+Fundamental improvements (vs C/C++):
+  - Strong typing, memory safety, garbage collection.
+
+Object orientation:
+  - Classes, objects, interfaces, subtyping (polymorphism), inheritance (code reuse).
+
+Generics:
+  - Parametric polymorphism (from FP).
+
+Other high-level features:
+  - Concurrency, first-class functions, reflection (is this object an instance of some class), introspection
+
+Really good tools:
+  - IDEs, debuggers, build systems, package managers, ...
+
+** Download Java 8 JRE/JDK.
+  http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html
+  http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+
+Here's the official java tutorial.
+
+http://docs.oracle.com/javase/tutorial/java/index.html
+  - Object-Oriented Programming Concepts
+  - Languages Basics
+  - Class and Objects
+  - Interfaces and Inheritance
+
+Java API reference
+
+https://docs.oracle.com/javase/8/docs/api/
+  Packages --> java.util
+
+Re: Java's tools. They're really great, but have a steep learning
+  curve. Like learning photoshop or final cut pro or pro tools.
+
+  For this class, you don't need to use any of these. We're focusing
+  on the language itself. Just an editor, the java compiler "javac",
+  and the java virtual machine "java".
+
+  Still, the tools are part of what makes java so great. Conversely,
+  lack of good tools is a major flaw of OCaml.
+    - each language has its own ecosystem.
+    - super important!
+
+OO languages structure code into objects that communicate with each
+other by sending *messages*.
+  - instead of calling a particular function f(x)
+  - send a message "f(x)" to an object: o.f(x)
+  - o decides which implementation to call.
+  - extra layer of indirection adds a lot of flexibility.
+
+This provides separation of *interface* and *implementation*.
+
+  - Implementation Flexibility.
+    - We can change the way something is implemented. Optimization.
+    - We can have several simultaneous implementations.
+
+  - Information hiding.    
+    - Hide private data or functionality from unprivileged users.
+
+    - Objects can guarantee encapsulation: the business partner can't
+      access my private data even if they are malicious.
+
+  - Modularity.
+    - Reason about each part of a program separately.
+
+All three properties are critical for *component-based* programming:
+    - people/companies produce components (e.g. class libraries)
+    - can validate them once
+    - can be safely used by clients in countless ways
+    - can be safely upgraded later
+
+--------------------- TestSet.java -------------------
+import java.util.List;
+import java.util.LinkedList;
+
+interface Set {
+    boolean contains(String s);
+    void addElem(String s);
+}
+
+class Client {
+    void myClient(Set s) {
+	s.addElem("hi");
+	if(! s.contains("hi") ) {
+	    System.out.println("WAT");
+	} else {
+	    System.out.println("Cool.");
+	}
+    }
+}
+
+class ListSet implements Set {
+    List<String> elems;
+
+    ListSet() {
+	elems = new LinkedList<String>();
+    }
+
+    public boolean contains(String s) {
+	return elems.contains(s);
+    }
+
+    public void addElem(String s) {
+	if( ! this.elems.contains(s) ) {
+	    elems.add(s);
+	}
+    }
+}
+
+class ArraySet implements Set {
+    // INVARIANT: length of the array = size of the set.
+    private String[] elems;
+
+    ArraySet() {
+	elems = new String[0];
+    }
+
+    public boolean contains(String s) {
+	// CAN WE USE FOREACH WITH AN ARRAY?
+	for(int i = 0; i < elems.length; i++) {
+	    if(s.equals(elems[i])) {
+		return true;
+	    }
+	}
+	return false;
+    }
+    
+    public void addElem(String s) {
+	if(!contains(s)) {
+	    String[] newElems = new String[this.elems.length + 1];
+
+	    for(int i = 0; i < elems.length; i++) {
+		newElems[i] = elems[i];
+	    }
+	
+	    newElems[elems.length] = s;
+
+	    this.elems = newElems;
+	}
+    }
+}
+
+class TestSet {
+    public static void main(String[] args) {
+	Client c = new Client();
+	c.myClient(new ListSet());
+    }
+}

@@ -1,0 +1,164 @@
+However, arbitrary arithmetic is not reversible!
+  - e.g., given X and Y, I can produce X*Y = Z easily
+
+So arithmetic constraints in SWI Prolog are "one way":
+  - a designated set of inputs, which must have constant values
+  - a designated output, which can be a variable
+
+temp1(C,F) :- F is 1.8*C + 32.0.
+  - computes F given C.
+  
+temp2(C,F) :- C is (F - 32.0) * 5.0 / 9.0.
+  - computes C given F.
+
+Can't even combine both temp1 and temp2!
+
+Another example:
+
+myLength([], 0).
+myLength([_|T], L) :- myLength(T, L2), L is L2 + 1.
+
+?- myLength([a,b,c], L).
+L = 3.
+
+Logically, the constraint between L and L2 could be written
+L2 is L-1. Doesn't work for computing the length of a list
+though (it will work for checking the length of a list, e.g.
+myLength([a,b,c], 3), but that's very useful.)
+
+This is annoying!
+  Prolog's bidirectional stuff is cool, but doesn't
+  always work well.
+
+--------------------- Course Summary ---------------------
+
+Programming Paradigms
+  - Imperative
+  - Functional
+  - Object Oriented
+  - Logic
+  - Multi-Paradigm
+  Hallmarks and strengths of each paradigm.
+
+Languages
+  - OCaml
+    + Functional: prefer recursion to iteration
+    + First-class functions
+    + Pattern matching
+    + Immutable data types
+    + Parametric polymorphism
+      length : 'a list -> int
+    + Type inference
+      reduces the cost of static type checking
+    + Anonymous functions
+      (fun x -> x + 1)
+  - Python
+    + Dynamically typed
+    + Duck typing
+    + Imperative/Functional/OO
+    + First-class functions
+    + Efficient general purpose data types (mutable)
+      Lists, Dictionaries, Sets, etc.
+    + List comprehensions
+      [x+1 for x in l]
+      [x+y for x in l1 for y in l2]
+      Ocaml:
+      map(fun x -> x + 1, l)
+    + Anonymous functions
+      (lambda x: x + 1)
+  - Java
+    + OO/Imperative (+ increasingly functional)
+    + Subtyping
+      - "Is a" relationship
+      - class A implements I {}
+        A is a subtype of I
+	A can be used where I is expected
+      - Modularity
+        important for maintainence
+	managing complexity
+    + Subclassing/Inheritance
+      - code reuse
+      - class B extends A {}
+        B inherits A's stuff
+	B is a subtype A
+      - in java subclass is inheritance + subtyping
+      - can't get inheritance without subtyping
+    + Generics (parametric polymorphism)
+    + Constrained Generics: Subtype + Parametric Polymorphism
+      sorting a list: A extends Comparable
+      subtyping (extends Comparable part) allows us to sort
+      parametric (A part) ensures the list is homogeneous
+    + Generics vs overloading.
+      different
+    + Overloading vs overriding.
+    + Subtyping vs automatic conversion.
+      - subtyping changes nothing
+        use a ListSet where a Set is expected
+      - automatic conversion makes a copy
+    + Checked exceptions
+      - throwing exceptions is part of the contract of a method
+      - type checker *checks*
+      - Java also has unchecked exceptions.
+        - good for unpredictable or ubiquitous errors
+    + Concurrency/Parallelism
+      o Difference between them, advantages of each
+      o Fork/Join, Future
+      o Thread
+    + Abstract Classes
+    + Downcalls
+      Example: Set.addAll(List<E>) calls ListSet.add(E elem)
+      a bunch of times
+      addAll is a superclass method, add is a subclass method
+  - Prolog
+    + Logic programming (PROgramming LOGic)
+    + Atoms, Predicates, Rules
+    + Queries
+    + Unification (pattern matching++)
+    + Search and Backtracking
+    + Declarative: say what you want, not how to get it
+      - contrast with imperative
+      
+The Big Ideas
+  - Syntax
+    + Grammars
+    + Syntax trees
+  - Functions
+    + Recursion
+    + Higher-order functions
+    + Closures
+    + Currying
+  - Naming
+    + Static Scoping
+    + Lifetime
+    + Shadowing
+  - Evaluation
+    + Eager evaluation.
+    + Lazy evaluation and short-circuiting.
+  - Typing
+    + Strong vs Weak
+    + Static vs Dynamic
+    + Automatic Conversion
+    + Polymorphism: parametric, subtype.
+  - Control Flow
+    + Loops
+    + Conditionals
+    + Pattern Matching
+    + Recursion
+    + Dynamic Dispatch
+    + Short-circuiting
+    + Unification/Backtracking
+  - Concurrency vs Parallelism
+    + Minimize sharing of mutable data
+      - eliminates wide classes of hard concurrency bugs
+      - Web Workers
+    + Difference between them.
+    + Advantages of each.
+  - Memory Management
+    + Heap vs Stack
+    + Dangling Pointer
+    + Memory Leak
+    + Garbage Collection
+  - Parameter passing.
+    + Call by value, aka pass by value.
+    + Call by reference.
+    

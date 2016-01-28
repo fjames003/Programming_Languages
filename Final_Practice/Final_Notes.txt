@@ -1,0 +1,385 @@
+1) Consider the following Java code:
+
+   class IntList {
+     // ... fields elided
+     IntList() {
+       // initialization elided
+     }
+
+     void insert(Integer elem) {
+       // insert elem at the front of the list
+     }
+
+     Integer get(Integer pos) {
+       // get the element stored at location pos
+     }
+   }
+
+   // SortedIntList maintains the invariant that
+   // the elements are in sorted order
+   class SortedIntList extends IntList {
+     void insert(Integer i) {
+       // insert i at the appropriate position to
+       // maintain the sortedness invariant
+     }
+   }
+
+   a) Explain how this design can lead to bugs by violating the
+      assumptions of IntList's users.
+
+        The class IntList gives users the assumption that when an element is inserted
+        it will be inserted at the front of the list. However, SortedIntList ruins
+        this assumption by inserted elements into the list in a manner that results
+        in a sorted list.
+
+        subtype problem... breaks insert.
+
+   b) Explain how this design can lead to bugs by violating the
+      assumptions of SortedIntList's users.
+
+        The 'get' method of SortedIntList uses the 'get' method provided to it by
+        IntList. This method will return an element at a certain position, however
+        by getting an element at certain position the user is not gaining any of the
+        functionality expected by a certain list. For example to get the smallest 
+        element, a user would call get(0), but this is only if the user knows the 
+        implementation which should not be required by the user.
+
+        subclass, inheritance... reverse addition would break it...
+
+   c) Propose an alternate method of achieving code reuse while
+      simultaneously preventing the problems from 1 and 2.
+
+        An alternative to this method would be for IntList to be represented as
+        an interface. This interface would garuntee certain methods for users wanting
+        to use a list, but would rely on the implementation (SetList) to decide how
+        these methods should work in a way that is consistent with what its users
+        expect.
+
+        wrapper class around Intlist...
+
+2) Implement Euclid's algorithm for finding the greatest common
+   divisor of two positive integers in functional, imperative, and
+   logic style.
+
+   The Algorithm:
+     If the two numbers are equal, the gcd is that number.
+     If either number is zero, the gcd is the non-zero number.
+     Otherwise, one number is greater than the other.
+       the gcd of the two numbers is equal to the gcd of the smaller
+       number and the difference between the two numbers.
+
+   a) Implement a recursive function gcd : (int * int) -> int in
+      ocaml.  Use pattern matching whenever possible.
+
+        let rec gcd = fun(x,y) -> 
+          match (x,y) with
+          | (a,b) when a = b -> a
+          | (a,0)            -> a
+          | (0,b)            -> b
+          | (a,b) when a > b -> gcd(b, a-b)
+          | (a,b)            -> gcd(a, b-a)
+
+   b) Implement gcd in an imperative style (loops and update instead
+      of recursion) in python or java.
+
+        def gcd(x,y):
+          while y:
+            x, y = y, x%y
+          return x
+
+        ** This algorithm is not consistent with that provided by the problem...
+
+   c) Define a relation gcd(X,Y,D) in prolog that is true if D is the
+      gcd of X and Y.
+
+        gcd(X,X,X).
+        gcd(X,0,X).
+        gcd(0,Y,Y).
+        gcd(X,Y,Z) :- X > Y, A is X - Y, gcd(Y, A, Z).
+        gcd(X,Y,Z) :- Y > X, A is Y - X, gcd(X, A, Z).
+
+3) Checked vs Unchecked Exceptions.
+   a) Discuss a benefit of checked exceptions. 
+
+        Checked exceptions allow users to declare when a method can/might
+        throw an exception, allowing users to handle them in a way they see
+        fit, such as by catching the exception and handling it in a way they
+        want.
+
+   b) Discuss a benefit of unchecked exceptions.
+
+        Unchecked exceptions provide a safegaurd for the language. Many exceptions
+        cannot be accounted for without a very detailed an CPU expensive type 
+        checker. For example, Null pointer exceptions are very hard to check for, 
+        as well as memory and side effects related exceptions that are very user
+        dependent.
+
+   c) Consider the Java code:
+
+      interface A {
+	void m();
+      }
+
+      class B implements A {
+	void m() throws Exception {
+	  throw new Exception();
+	} 
+      }
+
+      Does Java allow or disallow this program (i.e. will it compile or
+      produce a compile-time error)?  Why is it reasonable for Java to do
+      this?
+
+        This will produce a complile-time error as Class B is throwing an exception
+        for method m() that the interface A does not define.
+        This is reasonable because if B is choosing to implement A then it should
+        follow the expectations that A instills.
+
+4) Polymorphism
+   a) What is parametric polymorphism good for? Give an example (in
+      OCaml or Java) to illustrate your point.
+
+        Parametric Polymorphism is good for writing code that can be used for a 
+        variety of types. A classic example of this is with the length function 
+        in OCaml. A length function for a list should be the same implementation
+        regardless of what type the list contains. The code would be as follows:
+
+          let rec length : 'a list -> int = 
+            fun x -> 
+            match x with
+            | []    -> 0
+            | _::tl -> 1 + length tl
+
+   b) What is subtype polymorphism good for? Illustrate your point
+      with an example in Java.
+
+         Subtype polymorphism is good for inherticance when say A is 
+         a subtype of B, we can use B in all the same places we expect
+         A. This allows for an is-A relationship that can be powerful.
+
+         subtyping is different than inheritance...
+         For example:
+
+         class Animal {
+          String name;
+          Animal(String name) {
+            this.name = name;
+          }
+          void sayName() {
+            System.out.println("My name is " + this.name);
+          }
+         }
+         class Penguin extends Animal {
+          Penguin(String name) {
+            super(name);
+          }
+         }
+         Penguin p = new Penguin("Frankie");
+         Animal  a = p;
+         a.sayName();
+
+   c) What is the combination of parametric and subtype polymorphism
+      good for?  Illustrate your point with an example in Java.
+
+        Subtype polymorphism in combination with parametric polymorphism
+        is good for generics of a subtype relationship where many different 
+        types are all using some singular implementation. For example, 
+        a List class may be able to represent lists of many types, and
+        these types all share similar functionality with as represented below:
+
+          class List<T> {
+            Array<T> items;
+            numItems;
+            List<T>() {
+              numItems = 0;
+              Array<T> items = new Array<T>();
+            }
+            int length {
+              return this.numItems;
+            }
+            void addItem(T item) {
+              numItems++;
+              // add item to items...
+            }
+          }
+          class LinkedList<T> extends List<T> {
+            LinkedList<T>() {
+              super();
+            }
+            // some more methods...
+          }
+          LinkedList<String> strings = new LinkedList<String>();
+          List<String>    newStrings = strings;
+          newStrings.length;
+          
+          other form = list implementing comparable...
+
+5) In the Java code below, A's method "m" is overloaded. What is the
+   output of running Main?
+
+   ************************
+    The output of main is: 
+      Called A.m(Integer)
+      Called A.m(Object)
+      Called A.m(Object)
+   ************************
+
+   class A {
+     void m(Object o) {
+       System.out.println("Called A.m(Object)");
+     }
+
+     void m(Integer i) {
+       System.out.println("Called A.m(Integer)");
+     }
+   }
+
+   class Main {
+     public static void main(String[] args) {
+       A a = new A();
+       a.m(5);
+       a.m("hello");
+       Object o = new Integer(5);
+       a.m(o);
+     }
+   }
+
+6) What does this Java program output?
+
+   ************************
+    The output of main is: 
+      A.m(Object)
+      A.m(Object)
+      A.m(Object)
+      B.m(Integer)
+      A.m(Object)
+      A.m(Object)
+   ************************
+
+   class A {
+     void m(Object o) {
+       System.out.println("A.m(Object)");
+     }
+   }
+
+   class B extends A {
+     void m(Integer i) {
+       System.out.println("B.m(Integer)");
+     }
+   }
+
+   class Main {
+     public static void main(String[] args) {
+       A a = new A();
+       B b = new B();
+
+       Object o = new Integer(5);
+
+       a.m(5);
+       a.m("hello");
+       a.m(o);
+
+       b.m(5);
+       b.m("hello");
+       b.m(o);
+     }
+   }
+
+7) Consider the following Java program:
+
+   import java.util.*;
+   
+   abstract class A {
+     abstract void m();
+     void n() {
+       System.out.println("A.n");
+       this.m();
+     }
+   }
+
+   class B extends A {
+     void m() {
+       System.out.println("B.m");
+     }
+     void n() {
+       System.out.println("B.n");
+     }
+   }
+   
+   class C extends A {
+     void m() {
+       System.out.println("C.m");
+     }
+     void n(String msg) {
+       System.out.println("C.n: " + msg);
+     }
+   }
+
+   class Main {
+     public static void main(String[] args) {
+       List<A> as = new LinkedList<A>();
+       as.add(new B());
+       as.add(new C());
+   
+       for(A a : as)
+         a.n();
+     }
+   }
+
+   a) Write the output of running Main.
+
+   ************************
+    The output of main is: 
+      B.n
+      A.n
+      C.m
+   ************************
+
+   b) Which method calls in the program are downcalls?
+      
+      The downcalls in this program are this.m() -> C.m()...
+      
+   c) Which method declarations override a previous definition?
+
+      The method B.n()...
+------------------------------------------------------------------------------------------------
+8) Consider the following Java code:
+
+   void bookTicket(Event event, CreditCard ccInfo) {
+     try {
+       // make sure a ticket is available, and 
+       // reserve it so no one else can buy it.
+       Ticket t = reserveTicket(event);
+
+       // charge the card.
+       ccInfo.charge(ccInfo, t.cost());
+       return true;
+     } catch(TicketReservationException e) {
+       return false;
+     } catch(CreditCardTransactionException e) {
+       return false;
+     }
+   }
+
+   Is this code Exception safe? Why or why not?
+
+    No, because we reserve the ticket initially and then charge the card, 
+    so in the case that the card transaction throws an exception, we will
+    have reserved the ticket but not paid for it. Bad for business...
+
+9) Consider this code, which could be C, C++, or Java:
+  
+   a = 5;
+   b = 3;
+   foo(a,b);
+   bar(5);
+   a == 5;
+
+   a) What affect does the call have on the value of a assuming that foo
+      is call by value? Call by reference?
+
+      caller definition doesnt change for value...
+
+   b) Can bar be call by value? What about call by reference? Why or why
+      not?
+

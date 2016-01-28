@@ -1,0 +1,285 @@
+Python extra credit assignment (index) due Tuesday 11/10.
+
+  last time we talked about separating interface vs implementation.
+    - defined a Set interface
+    - defined a client that used the interface: "program to the interface"
+       - always encouraged in any language.
+       - wrote the client code before implementing any set.
+    - then we defined two implementations. ListSet and ArraySet.
+
+  this is good practice, e.g. in Test-Driven Development:
+     - define an interface
+     - write a bunch of tests against the interface
+     - use tests to drive implementations of the interface.
+
+  why is TDD good?
+     - tests are really part of the Interface (not the Java interface, but the conceptual interface)
+     - they specify behavioral "rules" (remember OCaml?) that the type system can't express or enforce.
+     - TDD is about writing down what you're trying to do first, and then making sure you do it.
+
+Java supports two kinds of polymorphism for types.
+
+1. parametric polymorphism
+  - called generics in Java
+  - we've already seen this in ML!
+  - a type can be parameterized by *type variables*
+
+List<String> stringList;  -- a list of strings; "string list" in OCaml
+List<Shape> shapeList;    -- a list of shapes; "shape list" in OCaml
+
+Can also make our Set interface more generic this way:
+
+interface Set<T> {
+  void add(T e);
+  boolean contains(T e);
+}     
+
+The T in Set<T> declares a new type variable, like 'a in an OCaml
+datatype.
+
+Set<String> s1 = ...
+s1.add("hello");
+Set<Shape> s2 = ...
+s2.add(new Square());
+
+s1.add("hello"); // Type error.
+
+Implementations can themselves choose to be parameterized, or not:
+
+class ListSet<T> implements Set<T> {
+  List<T> elems;
+  ...
+}
+
+class StringListSet implements Set<String> {
+  ... as before
+}
+
+2. (Second kind of polymorphism:) Subtype polymorphism.
+
+interface RemovableSet extends StringSet {
+  void remove(String s);
+}
+
+We can extend multiple interfaces simultaneously.
+
+Subtyping provides yet another form of polymorphism
+  - key principle: *subtype substitutability*
+    - if X "implements" or "extends" Y, then X <= Y.
+    - read: "X is a subtype of Y" or simply "X is a Y".
+    - if T1 <= T2, can use a value of type T1 wherever a value of type
+      T2 is expected
+      - because T1 supports all the operations of T2
+    - so a function expecting a T2 is polymorphic over all subtypes of T2
+    - as with parametric polymorphism, there is one function which can
+      be passed many different argument types
+
+interface RemovableSet extends StringSet {
+  public void remove(String s);
+}
+
+class RemovableListSet implements RemovableSet { ... }
+
+-- RemovableListSet <= RemovableSet <= StringSet
+-- So a RemovableListSet can be treated as a RemovableSet or a StringSet.
+
+class Client {
+  Set union(Set s1, Set s2) {
+    // ...
+  }
+}
+
+Static typechecking uses the declared types of variables to ensure no
+type errors (i.e., no run-time "message-not-understood" errors):
+
+class Client {
+  void test(RemovableSet rs) {
+    Set s = rs;	   // legal by subtype polymorphism
+    rs.addElem("hello");   // legal
+    rs.remove("hello"); // legal
+    s.remove("hello");  // static type error
+  }
+
+  // what about?
+  void test(Set s) {
+    RemovableSet rs = s;   // Type error
+    RemovableSet rs = (RemovableSet) s; // Dynamic type check could fail.
+    
+    rs.addElem("hello");   // legal
+    rs.remove("hello"); // legal
+    s.remove("hello");  // static type error
+  }
+
+}
+
+We can use both kinds of polymorphism simultaneously.
+
+class RemovableSet<T> extends Set<T> { ... }
+
+Be careful not to confuse subtyping with *coercion/conversion*:
+  - Set s = rs;
+    - does not change the thing referred to by rs at all
+  - int i = 2; float d = i;
+    - can result in a loss of precision.
+  - so can get what *looks like* a kind of polymorphism
+     void f(double x) {...}
+     f(4.5);
+     f(4)
+  - how different from subtype polymorphism?
+     - int is NOT a subtype of double
+     - instead, integer values are actually converted into double
+       values before the assignment occurs
+     - doubles and ints represented differently. can result in loss of precision.
+  - unlike the addition of subtyping, the addition of implicit
+      coercion is just a convenience
+    - languages could force explicit coercions
+      - e.g. in OCaml
+        f(4) disallowed
+	f(float(4)) instead
+
+- Why have two kinds of polymorphism?
+  - they are incomparable: each can do useful things that the other
+    cannot.
+
+   <T> void union(T s1, T s2) {
+     // can't ensure they're even Sets!
+   }
+
+   - So subtype polymorphism is good.
+
+- What can parametric polymorphism do that subtype polymorphism can't?
+   - Java has a type Object that is a supertype of all types, so why do we need parametric at all?
+   - Java added parametric in version 5 of the language, so there must have been a good reason!
+
+ Why is this:
+   interface Set<T> {
+     void add(T e);
+     boolean contains(T e);
+   }     
+
+ Different than this:
+   interface ObjectSet {
+     void addElem(Object o);
+     boolean contains(Object o);
+   }
+
+
+   client code for Set<T>:
+     Set<Program> pgms = ...
+     for(Program p : pgms) {
+       p.run();
+     }
+
+   client code for ObjectSet:
+     ObjectSet pgms = ...
+     for(Object o : pgms) {
+       Program p = (Program) o;  // down cast could fail! 
+       p.run();
+     }    
+
+  - statically only know that we get back objects!
+  - someone could put any object into the set!
+  - so parametric polymorphism is useful because it gives precise types for results
+     - the client instantiates the type variable with the precise type
+
+Inheritance and OO Design
+-------------------------
+
+class RemovableListSet implements RemovableSet {
+      protected List<String> elems;
+      ...
+}
+
+*Inheritance* is a mechanism in Java (and most OO languages) that
+ alleviates this problem:  One class's implementation can be defined
+ as a modification/extension of an existing class's implementation.
+
+We saw "extends" among interfaces:  declares a subtyping relationship
+
+"extends" among classes declares a subtyping relationship and an
+inheritance relationship (also called a *subclassing* relationship)
+
+class RemovableListSet extends ListSet implements RemovableSet {
+  public void remove(Object o) {...}
+}
+
+RLS is a subtype of LS:  can pass an instance of RLS where an LS is expected
+  - an *interface* issue -- they have compatible interfaces
+
+RLS is a subclass of LS:  RLS reuses code from LS
+  - an *implementation* issue
+
+RLS is a subtype of RS (declared via "implements")
+RLS is a subtype of S (via transitivity of subtyping, in two ways)
+
+RLS is *not* a subclass of S. Why not?
+  - S is not a class!
+
+Why do you think Java has this restriction?
+  diamond problem
+  interface A { void foo() { } }
+  class B implements A { void foo() { } }
+  class C implements A { void foo() { } }
+  class D extends B, C {}
+
+  which implementation of foo does D inherit?
+
+Java has three privacy labels:
+  public, private and protected.
+
+Subtyping vs subclassing:
+  They are related but different.
+  if A is a subclass of B, then A is a subtype of B.
+  A is a subtype of B does not imply A is a subclass of B.
+
+extends between classes is subtyping and subclassing
+extends between interfaces is subtyping only.
+
+  class Rectangle {
+    private int x, y, width, height;
+    Rectangle(int x, int y, int width, int height) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+    }
+
+    void move(int dx, int dy) {
+      this.x += dx;
+      this.y += dy;
+    }
+    
+    void scaleWidth(int factor) {
+      this.width *= factor;
+    }
+
+    void scaleHeight(int factor) {
+      this.height *= factor;
+    }
+
+    void draw() {
+      // ...
+    }
+  }
+
+  class Square extends Rectangle {
+    Square(int x, int y, int width) {
+      // call Rectangle constructor.
+      super(x,y,width,width);
+    }
+  }
+
+* Ok, great. We've saved a bunch of typing by reusing the definitions
+  in Rectangle. Any problems?
+  - Square has an invariant width=height, which Rectangle doesn't enforce.
+  - scaleWidth and scaleHeight can break it.
+  - can override scale* methods to scale width and height.
+  - Using Rectangle to implement Square is inefficient -- dont need both width and height.
+  - Modularity: we want to be able to change either Square or Rectangle without breaking the other.
+  - suppose we add new Rectangle methods addWidth and addHeight. Square automatically inherits,
+    and we break the invariant again.
+  - How to allow Squares to be passed where Rectangles are expected, but
+    not have Square inherit code from Rectangle?
+  - Want subtyping without inheritance. How?
+  
+

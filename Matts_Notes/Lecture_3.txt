@@ -1,0 +1,193 @@
+Review from last time:
+
+  let x = 1 + 2 in x * x
+
+  let x = 1 + 2 in
+  let y = 3 + 4 in
+  x * y
+   <==>
+  let x = 1 + 2 in
+  (let y = 3 + 4 in
+  x * y)
+	    
+Pattern matching with let:
+
+  let [x;y;z] = [1;2;3] in x + y + z
+
+Tuples:
+  (1, "hi", 2.0)
+
+Grammar of ocaml so far:
+  (Variables) X ::= <variables>
+  (Constants) C ::= 1,[],::,...
+  (Expressions)
+  E ::= C | X | if E then E else E
+      | let X = E in E
+      | match E with P1 -> E1 '|' ... '|' Pn -> En
+      | (E1, ..., En)
+  (Patterns)
+  P ::= C | _ | X | (P1, ..., Pn)
+
+
+Remember: a name pattern defines a name (possibly shadowing previous
+definition). It does not test for equality with a previously defined
+name.  For that, use match/when:
+
+let _ =
+  let x = 5 in
+  match 6 with
+  | y when x=y -> y + 1
+  | y          -> y + 2
+
+Tuples:
+(1, "hi", 2.0) has type (int * string * float)
+
+Pattern matching tuples:
+let (x,y,z) = (1, "hi", 2.0) in
+    x + 5
+
+(* We'll need Equality. *)
+let _ =
+  [1;2;3] == (1::2::3::[])
+
+let _ =
+  (1,2,3) == [1;2;3]
+
+let _ =
+  [1;2;3] = (1::2::3::[])
+	       
+(* WATCH OUT FOR pointer equality.
+   == is checking pointer values (two values occupy the same region in memory).
+   = is checking "value equality"
+ *)
+
+(* How do you check two values are not equal? *)
+let _ = not (1=2)
+
+(* How do we get the first element of a list (the head)?
+   What if the list is empty? *)
+let head l =
+  match l with
+  | x::_ -> x
+
+let _ = head []	      (* Throws an exception (run-time error) *)
+
+End of review.
+
+Tuples are good for functions with multiple arguments.
+
+let add(x,y) = (x+y)	  
+let _ = add(3,4)
+
+Special case: the 0-element tuple.
+type is "unit", value is (). 
+
+let randDigit = Random.int 10	  
+
+randDigit is a fixed int value.
+
+let randDigit() = Random.int 10	  
+
+randDigit is now a function from unit to int.
+Every call produces a different random integer.
+
+Example:
+Find the prime numbers less than some number N.
+
+Three functions:
+  divides: check if a number divides another.
+  prime: check if a number is prime
+  primes: tie it all together.
+
+
+let divides((d,n) : int * int) : bool =
+  n mod d = 0
+
+let _ = assert(divides(3,9))
+let _ = assert(not (divides(3,10)))
+
+let prime(n:int) : bool =
+  let rec noDivisorsGeq(d,n) : bool =
+    if d >= n
+    then true (* tried everything *)
+    else if divides(d,n)
+    then false (* found a divisor *)
+    else noDivisorsGeq(d+1,n) (* keep looking *) 
+  in noDivisorsGeq(2,n)
+
+let _ = assert(not (prime 6))
+let _ = assert(prime 1) 
+let _ = assert(prime 2)					 
+let primes (max:int) : int list =
+  let rec primesGeq(l:int) : int list =
+    if l >= max
+    then []
+    else if prime l
+    then l :: primesGeq (l+1)
+    else primesGeq (l+1)
+  in primesGeq 2
+
+(* User-defined types *)
+
+type sign = Pos | Neg | Zero
+  (* Pos, Neg, Zero are constants of type sign *)  
+
+(* All you can do with Pos,Neg,Zero is pass them around,
+   test for equality, and pattern-match
+ *)
+   
+let signOf(n:int) : sign =
+  match n with
+  | 0            -> Zero
+  | _ when n < 0 -> Neg
+  | _            -> Pos
+
+let signToInt s =
+  match s with
+  | Zero -> 0
+  | Pos  -> 1
+  | Neg  -> -1
+
+(* Types can have associated data *)
+type point = Cartesian of int * int	      
+
+  (* Cartesian is a "constructor".
+   *)
+
+(* like
+struct point {
+  int i,j;
+}	      
+ *)
+
+let negate (Cartesian(x,y)) =
+  Cartesian(-x,-y)
+
+type point = Point of int * int
+
+let pair2point (x,y) = Point (x,y)
+let point2pair (Point (x,y))
+  = (x,y)
+
+type option = None | Some of int			      
+
+let head (l:int list) =
+  match l with
+  | [] -> None
+  | hd::_ -> Some hd
+
+type 'a option = None | Some of 'a
+
+let head (l:'a list) : 'a option =
+  match l with
+  | [] -> None
+  | hd::_ -> Some hd
+
+  (* Now head is defined on all lists. Never throws an exception *)
+
+let safeDiv(x,y) =
+  if y = 0
+  then None
+  else Some (x/y)
+
+let _ = assert(safeDiv(2,0) = None)	    

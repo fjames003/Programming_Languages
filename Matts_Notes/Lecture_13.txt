@@ -1,0 +1,227 @@
+Parametric Polymorphism
+================
+
+let rec length (l: string list) : int = 
+  match l with
+  | []    -> 0
+  | _::tl -> 1 + length tl
+
+
+let rec length (l: 'a list) : int = 
+  match l with
+  | []    -> 0
+  | _::tl -> 1 + length tl
+
+This is an example of *parametric polymorphism*:
+  - 'a is a *type variable*
+  - can be *instantiated* with any type
+  - like an implicit extra *parameter* to the function
+    length int [1;2;3]
+    length string ["hi"; "bye"]
+  *important* difference: the type instantiation happens at compile time!!!
+     - In OCaml, types don't exist at run time
+
+(int list -> int) and (string list -> int) are
+  "instantiations" of ('a list -> int)
+
+OCaml is *guaranteed* to infer to *most general*.
+
+let swap (x,y) = (y,x)
+
+swap :  (int * int) -> (int * int)
+swap :  ('a * 'a) -> ('a * 'a)
+swap :  ('a * 'b) -> ('b * 'a)
+
+swap' (1, "hello") = ("one", 0)
+  (int * string) -> (string * int)
+
+  there are many more possible implementations of
+     (int * string) -> (string * int)
+  than of
+     ('a * 'b) -> ('b * 'a)  
+
+For this type: ('a * 'b) -> ('b * 'a)
+  - could either really swap
+  - could raise an exception
+  - could go into an infinite loop
+  
+Instantiation. How?
+
+  First, how do we typecheck a call?
+
+  let double x = x*2
+  
+   double "foo"
+   double 5
+
+  -- look up type of double
+      int -> int
+  -- look up type of the argument
+      "foo": string
+      5    : int
+      
+  -- if type of formal param. =
+     type of actual param.
+     then: type of call is the right
+     hand side of the -> (int).
+
+  E.g. length [1;2;3]
+  -- look up type of length
+      'a list -> int
+  -- look up type of [1;2;3]
+      int list
+  -- is there an "instantiation" of 'a
+     that makes 'a list = int list?
+       'a := int
+  -- type of the call is
+     the type on the right side of ->,
+     substituting 'a := int
+
+  reverse: 'a list -> 'a list
+    reverse [1;2;3]
+
+  'a := int
+
+    reverse [1;2;3] : int list
+
+Another example:
+
+  swap (3, "hi")
+
+  swap: ('a * 'b) -> ('b * 'a)
+  (3,"hi") : (int * string)
+
+  Match ('a * 'b) with (int * string)
+    => 'a := int, 'b := string
+
+  Result:
+    ('b * 'a)['a := int, 'b := string]
+  = (string * int)
+
+
+We can define polymorphic types (and
+polymorphic functions on those types).
+
+  type 'a tree =
+      Leaf
+    | Node of ('a tree * 'a * 'a tree)
+    
+  "tree" is not a type.
+  "'a tree" is a type.
+  "int tree" is a type.
+  "('a * 'b) tree" is type.
+
+A type can be parametric in
+multiple types!
+
+ type ('a,'b) dict2 =
+     Empty
+   | Entry of ('a * 'b * ('a, 'b) dict2)
+
+  dict2 is not a type
+  int dict2 is not a type
+  (int,string) dict2 is a type
+  
+
+Parametric polymorphism originated in
+  70's ML.
+
+Added to Java in Java 1.5 (2004)
+  - generics
+
+  In java 1.4:
+
+    String getFirstString(List l) {
+      return (String) l.get(0);
+    }
+
+  In java 1.5:
+  
+ String getFirstString(List<String> l) {
+   return l.get(0);
+ }
+
+  We can still get heterogeneous lists:
+  List<Object>
+
+  Parametric polymorphism is now common in modern statically-typed
+  languages: C#, Scala, Rust, ...
+
+Static overloading:
+  a separate function per argument type.
+  void foo(String x) { ...}
+  void foo(Integer x) { ... }
+
+  choose between these guys based on the argument type.
+
+  looks like the name "foo" is polymorphic.
+
+  but really:
+    foo_<String>
+    foo_<Integer>
+
+  Most languages have some overloading for built-in operators
+    - + for ints, strings, ..
+
+  Some languages allow user-defined operator overloading.
+
+    - OCaml doesn't overload +, *, etc.
+      +. (floats) *. ...
+
+    - OCaml "overloads" = == <
+        This is a hack.
+
+  Parametric polymorphism increases expressiveness
+  Overloading is just a convenience
+
+  Overloading can be convenient but also confusing
+    - can't easily tell which definition will be used
+    - IDEs can help
+
+  e.g. negate.
+
+   let negate (e : intOrBool) =
+     match e with
+       Int x -> Int (-x)
+     | Bool b -> Bool (not b)
+
+   negate (Int 5)
+   negate (Bool true)
+
+   is this overloading?
+     No. only one definition of negate
+         (Int 5) and (Bool true) have same type.
+
+e.g. Java
+
+   void foo(String s) { ... }
+   void foo(Object o) { ... }
+
+   String x = "foo";
+   Object o = x;
+
+   foo(x);   // use foo(String)
+   foo(o);   // use foo(Object)
+   
+
+   o.foo()   // this would dynamically dispatch to String
+
+"Dynamic overloading": would dispatch foo(o) to Object version.
+  - multimethods or multiple dispatch.
+  - clojure.
+ 
+  OO dispatch on the receiver (this) only.
+  multiple dispatch selects the method implementation by
+    the dynamic types of _all_ arguments.
+
+  
+Order of overloaded definitions doesn't matter.
+
+   void foo(Object o) { ... }
+   void foo(String s) { ... }
+
+   String x = "foo";
+   Object o = x;
+
+   foo(x);   // use foo(String)
+   foo(o);   // use foo(Object)

@@ -1,0 +1,335 @@
+Review from last time:
+  courses.pl
+    - defines facts.
+    - cmsi281 is a symbol (not a variable).
+      has no meaning. is only equal to itself.
+    - prereq is a binary predicate.
+      two parameters, true or false.
+    - first line declares prereq(cmsi281,cmsi185) to be true.
+      "cmsi281 has a prerequisite cmsi185".
+
+Enter interpreter:
+  $ swipl
+  ?- consult(courses).  % load facts from the file.
+
+When in the interpreter, terms are interpreted as *queries*.
+Is cmsi185 a prerequisite of cmsi281?
+  ?- prereq(cmsi281,cmsi185).
+  true.
+  
+Is cmsi186 a prerequisite of cmsi281?"
+  ?- prereq(cmsi281,cmsi186).
+  false.
+  
+More interesting examples:
+
+Find a prereq of cmsi386 that has cmsi281 as a prereq.
+  ?- prereq(cmsi386, X), prereq(X,cmsi281).
+  X = cmsi284.
+
+Find two courses that have a prereq in common.
+  ?- prereq(X, Y), prereq(Z, Y), X \= Z.
+  (bunch of results).
+
+Find a course that is a prereq of a prereq of cmsi386.
+  ?- prereq(cmsi386, X), prereq(X, Y).
+  X = cmsi284,
+  Y = cmsi281.
+
+*Rules* let us give a query a name
+ 
+We can make a new function symbol prereq2(X,Y) to represent the fact
+that Y is a prereq of a prereq of X.
+
+prereq2(X,Y) :- prereq(X, Z), prereq(Z, Y).
+
+Rule is defined by a *head*, the turnstile ":-", and a list of
+*conditions*.
+ - if the conditions are true, then the head is true.
+ - to prove the head, prove the conditions.
+
+More specifically: to prove prereq2(X, Y), for some bindings of X and
+Y, find some binding for Z such that prereq(X, Z) and prereq(Z, Y) are
+provable.
+
+Now the last query above becomes:
+  ?- prereq2(cmsi386, Y).
+  Y = cmsi281.
+
+Note that only variables in the head are returned; others just used
+internally to answer the query.
+
+How does prolog execute this query?
+
+prereq2(cmsi386,Y).
+
+1. unify prereq2(cmsi386,Y) and prereq2(X,Y).
+   {X -> cmsi386}
+
+2. Now need to prove: prereq(cmsi386,Z) and prereq(Z,Y).
+
+3. unify prereq(cmsi386,Z) with prereq(cmsi386,cmsi284)
+   {Z -> cmsi284}.
+
+4. Now, need to prove prereq(cmsi284, Y).
+   unify prereq(cmsi284, Y) with
+   prereq(cmsi284,cmsi281).
+   {Y -> cmsi281}.
+
+Again, logically we are just asking for all instantiations of Y such
+that prereq2(cmsi386,Y) is true according to the facts/inference rules
+in the knowledge base.
+
+Let's look at another example:
+
+prereq2(cmsi485,Y).
+
+1. unify prereq2(cmsi485, Y) with prereq2(X,Y)
+   {X -> cmsi485}.
+
+2. need  to prove prereq(cmsi485,Z), prereq(Z,Y)
+
+3. prove prereq(cmsi485,Z)
+   unify prereq(cmsi485,Z) with
+   prereq(cmsi485,cmsi385)
+
+   {Z -> cmsi385}.
+
+4. Now need to prove prereq(cmsi385,Y)
+
+   unify prereq(cmsi385,Y) with anything in the db.
+
+   Stuck. cmsi385 has no prereqs.
+
+5. backtrack. revert the last assignment.
+   {Z -> cmsi385}.
+   
+6. unify prereq(cmsi485,Z) with
+   prereq(cmsi485,cmsi386)
+   {Z -> cmsi386}.
+
+7. unify
+   prereq(cmsi386,Y) with
+   prereq(cmsi386,cmsi284)
+
+  {Y -> cmsi284}.
+
+
+Prolog automatically searches *all* possibilities.  Try one fact or
+rule that may lead to more subgoals to prove.  Continue until stuck,
+then *backtrack* to the last choice point and try another option.
+More on the Prolog search strategy later.
+
+Rules are more expressive than queries in a few ways:
+  
+Can have multiple clauses defining the same predicate.  E.g. the
+various facts for prereq.  So in particular, can have multiple rules.
+Acts like a disjunction (OR): either rule can be used to lead to a
+solution to the query.
+
+Example:
+  cmsi185 is an explicit prereq of cmsi281.
+  cmsi185 is an implicit prereq of cmsi282. not listed but still have to take it.
+
+Let's encode this as a predicate prereqEI(X,Y), which will be true if
+Y is an explicit or implicit prereq of X.
+
+easy case: explicit prereqs (prereq encodes these).
+
+prereqEI(X,Y) :- prereq(X,Y).
+
+if Z is an explicit prereq of X and Y is an explicit prereq of Z, then
+Y is an implicit prereq of X.
+
+prereqEI(X,Y) :- prereq(X,Z), prereq(Z,Y).
+
+Note: now we have two rules with the same head prereqEI(X,Y). Two ways
+to prove Y is either an explicit or implicit prereq of X. In general,
+multiple rules for a single head is like logical OR: *either* rule can
+be used to prove the query.
+
+Now prereqEI can prove explicit prereqs, or implicit prereqs with one
+intermediate course.
+
+How about two intermediate courses?
+Z is explicit prereq of X, Z and Y have one intermediate course.
+> prereqEI(X,Y) :- prereq(X,Z), prereq2(Z,Y).
+
+How to get all prereqs, at any "distance" from one another?  Need
+recursive rules!
+
+prereqEI(X,Y) :- prereq(X,Z), prereqEI(Z,Y).
+
+Try this:
+?- prereqEI(cmsi486,X).
+
+Note all the duplicates!  One for each way of proving a particular
+prereq.
+  - can use setof to filter them
+
+setof(X, prereqEI(cmsi486,X), L).
+
+Important to remember that terms are completely uninterpreted.  Prolog
+has no idea what the prereq predicate is intended to mean.  This even
+extends to pre-defined function symbols:
+
+?- 1+2 = 3.
+false.
+
+The '=' operator says "true." if the two terms (i.e., their parse
+trees) can be unified.  But unification is purely symbolic, so the two
+terms do not match.
+
+?- X = 1+2.
+X = 1+2.
+
+What is unification?  *Tree* matching.
+ - terms are just trees
+ - like pattern matching in OCaml!
+   - you implemented a form of this in hw3!
+ - OCaml's matches patterns against values.
+ - Prolog's matches terms against terms.
+   - simpler, more uniform. No separate language of patterns.
+   - more general : both terms can contain variables
+
+?- X+5 = 3+Y.  
+X = 3,
+Y = 5.
+
+Note also that these operators are really regular predicate symbols.
+
+?- =(+(X,5), +(3,Y)).
+X = 3,
+Y = 5.
+
+Slogan: Unification is bidirectional pattern matching.
+  - ocaml pattern matching: match a pattern against a value.
+    - finds an assignment to variables in the pattern
+      that makes the pattern equal to the value.
+    - value does not contain variables.
+  - prolog unification: matches two terms.
+    - either term can contain variables.
+    - finds an assignment to variables in both terms
+      that makes the two terms equal.
+    - can even assign two variables to each other.
+
+?- X+5 = Y+Z.
+X = Y,
+Z = 5.
+
+In the original Prolog language, there were no interpreted operations.
+Everything was syntactic, as shown above.  Of course, you could
+implement a semantics for numbers as needed for your application.
+
+plus(1, 2, 3). % in a .pl file this declares 1 + 2 to be 3.
+
+swipl understands arithmetic constraints, and it has a built-in
+predicate that can be used to evaluate arithmetic expressions like
+1+2.
+
+?- 1 + 2 =:= 3.
+true.
+
+But this breaks some of the nice declarative properties of the
+language.
+  - doesn't work with variables.
+
+?- 1 + X =:= 3.
+ERROR: =:=/2: Arguments are not sufficiently instantiated
+?- 1 + 2 =:= X.
+ERROR: =:=/2: Arguments are not sufficiently instantiated
+
+Lists
+-----
+
+As in ML and Python, lists are a commonly used data structure.
+  
+[] is the atom representing nil, as in ML
+
+Cons (adding an element to the front of a list) is a bit weird. In ML,
+we'd write "1::l".  In Prolog, we write "[1|L]".
+
+Some lists:
+
+  []   [1|[]]   [1|[2|[]]]    [1|[[1|[]]|[]]]
+
+  Dynamically typed:  lists can be heterogeneous, can contain any term
+  (including terms with variables).
+
+  Shorthands similar to ML/Python lists:
+
+  ?- [1|[]] = [1].
+  true.
+  
+  ?- [1|[2|[]]] = [1,2].
+  true.
+  
+  ?- [1|[[1|[]]|[]]] = [1, [1]].
+  true.
+
+  Another useful shorthand not present in ML:
+
+  ?- [1, 2 | [3]] = [1 | [2 | [3]]].
+  true.
+
+  So use [X | Xs] instead of x::xs
+
+  After | is a term for the tail of the list.
+
+  ?- [1,2 | X] = [1,2,3,4,5].
+  X = [3,4,5].
+
+  Predefined predicates for lists.
+
+  ?- append([1,2], [3,4], X).
+  X = [1,2,3,4].
+  
+  Of course, can go "backwards" just as easily.
+
+  ?- append(X, [3,4], [1,2,3,4]).
+  X = [1,2].
+
+  Can even compute all possible combinations leading to some appended
+  list.
+
+  ?- append(X, Y, [1,2,3,4]).
+  X = [],
+  Y = [1, 2, 3, 4] ;
+  X = [1],
+  Y = [2, 3, 4] ;
+  X = [1, 2],
+  Y = [3, 4] ;
+  X = [1, 2, 3],
+  Y = [4] ;
+  X = [1, 2, 3, 4],
+  Y = [] ;
+  false.
+
+  - Each result (consisting of assignments to X and Y) separated by ;
+  - The false. indicates that there are no more results.
+
+  How is append define?
+
+  Recall the Ocaml version:
+
+  let rec append (l1, l2) =
+    match l1 with
+      []     -> l2
+    | hd::tl -> hd :: append(tl,l2)
+
+  Can view these cases as constraints.  Express same constraints in
+  Prolog, after "relationalizing" (making the return value an explicit
+  parameter):
+    
+  myAppend([], L2, L2).
+  myAppend([Hd|Tl], L2, [Hd|R]) :- myAppend(Tl, L2, R).
+
+  Biggest difference:  ML version is unidirectional -- given 2 concrete
+  list values, it computes the list that is the append of the 2 lists.
+
+  Prolog version, on the other hand, is just a pair of undirected
+  logical propositions.  Can be used to derive any logically implied
+  fact from these propositions.
+
+
+  

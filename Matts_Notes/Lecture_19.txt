@@ -1,0 +1,403 @@
+/*
+
+Last time:
+ */
+
+class Rectangle {
+    private int x, y, width, height;
+    Rectangle(int x, int y, int width, int height) {
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+    }
+
+    void move(int dx, int dy) {
+      this.x += dx;
+      this.y += dy;
+    }
+    
+    void scaleWidth(int factor) {
+      this.width *= factor;
+    }
+
+    void scaleHeight(int factor) {
+      this.height *= factor;
+    }
+
+    void draw() {
+      // ...
+    }
+  }
+
+  class Square extends Rectangle {
+    Square(int x, int y, int width) {
+      // call Rectangle constructor.
+      super(x,y,width,height);
+    }
+  }
+
+/*
+  - Problem: subclass means inheritance! Inheriting from Rectangle is bad,
+    because its implementation does not maintain Square's invariants!
+  - What should we do?
+  - Make a "Rectangular" interface that both Rectangle and Square implement.
+ */
+
+interface Rectangular {
+  void scaleWidth(int);
+  void scaleHeight(int);
+  // ...
+}
+
+class Rectangle implements Rectangular {
+    int width,height;
+    
+    void scaleWidth(int factor) {
+      this.width *= factor;
+    }
+
+    void scaleHeight(int factor) {
+      this.height *= factor;
+    }
+}
+
+class Square implements Rectangular {
+    int width; // don't need height; it's always equal to width
+    
+    void scaleWidth(int factor) {
+      this.width *= factor;
+    }
+
+    void scaleHeight(int factor) {
+      this.width *= factor;
+    }
+}
+
+/*
+
+Let's consider another issue.  Consider a class representing a Bag (or multiset):
+
+ */
+
+class Bag {
+  Object[] elements;
+
+  int size() { ... };
+  void add(Object elem) { ... };
+  boolean contains(Object elem) { ... };
+  ...
+}
+
+/*
+Now suppose we want to implement a Set. Should Set extend Bag?
+Subclassing is subtype polymorphism + inheritance.
+  Subclassing:
+    - Set can reuse Bag's implementation. Good!
+    - We'll probably want a similar implementation anyway.
+    - We can just inherit the underlying array and length, the size() method,
+      etc. 
+  Subtyping:
+    - A Set is just a Bag, plus an extra check before adding to make sure
+      the element isn't already there.
+    - Subtyping encodes "is a" relationships.
+    - Seems fine.
+ */
+
+class Set extends Bag {
+  // override add
+  void add(Object elem) {
+    if(! this.contains(elem)) {
+      super.add(elem);
+    }
+  }
+}
+
+// Some client code:
+
+  Bag bag = somewhere.getBag();
+  int n = bag.size();
+  bag.add(e); 
+  assert(bag.size() == n + 1);
+
+/*
+
+If bag is a Bag: no problem.
+If bag is a Set:
+  If bag already contains e,
+  bag.add(e) does nothing!
+  bag.size() == n
+
+ */
+
+/*
+What happened?
+  A Set is not actually a bag, because it doesn't always act like one!
+  
+  Remember, the Bag "interface" is not just the types of its methods,
+  but its contract (the rules a Bag must follow).
+
+  Set does not follow the same rules.
+
+  If client code expects something to be a Bag, they shouldn't be
+  given a Set.
+
+  So Set should not be a subtype of Bag after all.
+*/
+
+/*
+
+Moral: There are times when inheritance makes sense without subtyping.
+
+In Java, inheritance without subtyping is impossible.
+
+*/
+
+class Collection {
+  Object[] elements;
+  int length;
+
+  int size() { ... };
+  ...
+}
+
+/*
+Collection is a just a bunch of code that does stuff.
+
+It makes no commitment about whether duplicates are allowed or not.
+
+There is no contract for how an object of type Collection should
+behave.
+
+Bag and Set now each extend Collection and provide their particular
+contract.
+*/
+
+abstract class Collection { ... }
+
+/*
+An abstract class cannot be instantiated with "new", since it's
+incomplete.  The typechecker ensures this at compile time.
+
+However, we can still have objects of type Collection:
+*/
+  Collection c1 = new Set();
+  Collection c2 = new Bag();
+
+/*
+Note: There is no way in Java to get inheritance without subtyping.
+ */
+
+/* Differences between interfaces and abstract classes:
+
+  - an interface is a type!
+    - a class implements an interface in order to be considered to
+      have that type
+    - its instances can be passed where that type is expected
+
+  - an abstract class is a repository for shared code!
+    - allows for code reuse
+    - but it can also be used as a type
+
+More about abstract classes later.
+
+ */
+
+/* Overriding and Dynamic Dispatch:
+
+First, let's talk about interfaces again. Recall our Set/ListSet/ArraySet example.
+
+ - We had a Set interface.
+ - We programmed a client against the interface.
+   - called methods contains and addElem provided by Set.
+ - We later defined two classes ListSet and ArraySet that implemented the Set interface.
+ - How does Java know which implementation of contains and addElem to use in the client code?
+   - ListSet? ArraySet? some other implementation of Set?
+ - The answer is dynamic dispatch.
+ - Key word here is dynamic, which in this context means "while running the program".
+ - Each object carries around enough information that Java can
+   figure out which implementation to call "on the fly".
+ - Dynamic dispatch works the same way for extending a class as for implementing
+   an interface.
+   - In general, when we call a method m() of some object o of type T, there are 3 possibilities:
+     - the implementation of m could be inherited from a superclass of T
+     - the implementation of m could come from the *class* T.
+     - the implementation of m could be overridden by a subclass of T
+
+
+*/
+
+   List<Set> sets = ...
+   for(Set s : sets) {
+     if(s.contains(elem)) {
+       n++;
+     }
+   }
+
+   /*
+ Each call can *dispatch* to a different implementation of contains.
+
+ Dynamic dispatch is also called *late binding*. The method name is
+ *bound* to its implementation at last possible moment. Right before
+ calling.
+
+ Dynamic dispatch is often called a form of polymorphism. But you 
+ can have subtype polymorphism without dynamic dispatch. 
+   */    
+
+   /* Downcalls. */
+
+  class C {
+     void n() { this.m(); }
+     void m() { System.out.println("called C.m()"); }
+  }
+       
+  class D extends C {
+     void m() { System.out.println("called D.m()"); }
+  }
+
+  D d = new D();
+  C c = d;
+  d.m();  // "called D.m()"
+  c.m();  // "called D.m()"
+
+  d.n();  // "called D.m()"
+  c.n();  // "called D.m()"
+
+/*
+  d.n():
+    -- lookup d's implementation of n(). C.n()
+    -- call C.n() with this=d
+  this.m():
+    -- lookup d's implementation of m(). D.m()
+    -- call D.m() with this=d
+    -- prints "D.m()".
+ */
+
+/*
+An especially useful place for downcalls is in abstract classes, where
+the downcall is to an *abstract method*.
+*/
+
+abstract class Collection {
+  Object[] elements;
+  int length;
+
+  // abstract method: no implementation
+  abstract void addElem(Object elem);
+
+  // concrete method: has an implementation
+  void addAll(List<Object> elems) {
+    for(Object elem : elems) {
+      this.addElem(elem);     // call to an abstract method!
+    }
+  }
+}
+
+class Set extends Collection {
+  void addElem(Object elem) {
+    if(! this.contains(elem)) {
+      // insert into elements list.
+    }
+  }
+}
+
+class Bag extends Collection {
+  void addElem(Object elem) {
+    // no check; just insert.
+  }
+}
+
+/*
+Note: Collection can even provide a method insert() that Set and Bag
+can use to define addElem. More code reuse. Can make it *protected* so
+subclasses like Set and Bag can call it, but client code cannot.
+*/
+
+
+/*
+First, the Overriding method must have the same argument types as the
+overridden method and the same or *more specific* (i.e., a subtype)
+return type.
+  - Same visibility as well.
+  - Can a subclass of an abstract class see private methods of the abstract class?
+*/
+
+/* Don't confuse overriding with overloading! 
+
+ - With overloading, multiple methods of the same name are distinguished
+   at *compile time*, by the types of the arguments.
+
+ - With overriding, multiple impls of the same name are distinguished
+   at *run time*, by the type of the receiver argument.
+ */
+
+class Foo {
+  void m(C c) { ... }
+  void m(D d) { ... }
+}
+
+// Java treats these as two separate methods. The same as:
+
+class Foo {
+  void m_C(C c) { ... }
+  void m_D(D d) { ... }
+}
+
+/*
+Java actually does just this under the hood: it "decorates" the method
+names to disambiguate.
+
+Key difference between dynamic dispatch and overloading: overloading
+is *early bound* or "statically dispatched":
+*/
+
+Foo foo = new Foo();
+D d = new D();
+foo.m(d);   // calls Foo.m(D d)
+
+C c = d;
+foo.m(c);   // calls Foo.m(C c)
+
+/*
+
+Java chooses the implementation of an overloaded method *statically*,
+based on the argument's type.
+
+Dynamic dispatch can be combined with overloading!
+ -- this can be confusing.
+
+*/
+
+class Foo {
+  void m(C c) { ... }
+  void m(D d) { ... }
+}
+
+class Bar extends Foo {
+  void m(C c) { ... }
+  void m(D d) { ... }
+}
+
+Bar bar = new Bar();
+Foo foo = bar;
+
+D d = new D();
+C c = d;
+
+// which implementation of m is used for each of:
+bar.m(c); // Bar.m(C c)
+bar.m(d); // Bar.m(D d)
+foo.m(c); // Bar.m(C c) vs Foo.m(C c). Choose Bar
+foo.m(d); // Bar.m(D d) vs Foo.m(D d). Choose Bar
+
+/*
+Might want all of these to call Bar.m(D d).
+  -- Select implementation based on the dynamic types
+  -- of the receiver and the argument.
+  -- Similarly for multiple arguments.
+
+This is called multiple dispatch. Languages like clojure do this.
+
+Provides something close to pattern matching.
+ */

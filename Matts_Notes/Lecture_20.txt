@@ -1,0 +1,430 @@
+// Build a list and print it.
+
+import java.util.*;
+class SortList {
+    public static void main(String[] args) {
+	List<String> strings = new LinkedList<String>();
+	strings.add("Hello");
+	strings.add("Goodbye");
+	strings.add("java");
+	strings.add("hello");
+	strings.add("bananas");
+	strings.add("Java");
+	strings.add("Bob");
+	strings.add("words");
+	System.out.println(strings);
+    }
+}   
+
+
+//   Sort it and print again.
+
+import java.util.*;
+class SortList {
+    public static void main(String[] args) {
+	List<String> strings = new LinkedList<String>();
+	strings.add("Hello");
+	strings.add("Goodbye");
+	strings.add("java");
+	strings.add("hello");
+	strings.add("bananas");
+	strings.add("Java");
+	strings.add("Bob");
+	strings.add("words");
+	System.out.println(strings);
+
+	Collections.sort(strings);
+	System.out.println(strings);
+    }
+}   
+
+/*
+   Collections.sort()
+     - http://docs.oracle.com/javase/8/docs/api/java/util/Collections.html#sort-java.util.List-
+     - Type of sort says the list element type needs to be Comparable with itself or one
+       of its super types.
+     - Compareable defines a compareTo() method.
+       
+       Less than:    negative number
+       Equal:        0
+       Greater than: positive number
+       
+     - https://docs.oracle.com/javase/8/docs/api/java/lang/Comparable.html
+     - Strings are comparable with themselves, which works.
+*/
+
+
+/* Next: How about descending order?
+     - Could: sort, then reverse.
+     - better: use the *Comparator* Collections.reverseOrder
+        - sorts using its compare method instead of
+	  String's compareTo method
+        - more efficient than sort/reverse: one-pass.
+	- stable: equal elements in same order before and
+	  after sorting. sometimes important
+     - http://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html
+*/
+
+import java.util.*;
+class SortList {
+    public static void main(String[] args) {
+	List<String> strings = new LinkedList<String>();
+	strings.add("Hello");
+	strings.add("Goodbye");
+	strings.add("java");
+	strings.add("hello");
+	strings.add("bananas");
+	strings.add("Java");
+	strings.add("Bob");
+	strings.add("words");
+
+
+	// sort method is overloaded!
+	Collections.sort(strings, Collections.reverseOrder());
+	System.out.println(strings);
+    }
+}   
+
+/*
+   How about case-insensitive?
+     - define our own Comparator instance
+     - Define a class CaseInsensitive that implements Comparator<String>
+ */
+
+import java.util.*;
+
+class CaseInsensitive implements Comparator<String> {
+    public int compare(String s1, String s2) {
+	return s1.toLowerCase().compareTo(s2.toLowerCase());
+    }
+}
+
+class SortList {
+    public static void main(String[] args) {
+	List<String> strings = new LinkedList<String>();
+	strings.add("Hello");
+	strings.add("Goodbye");
+	strings.add("java");
+	strings.add("hello");
+	strings.add("bananas");
+	strings.add("Java");
+	strings.add("Bob");
+	strings.add("words");
+
+	Collections.sort(strings, new CaseInsensitive());
+	System.out.println(strings);
+    }
+}   
+
+
+/* Note: A CaseInsensitive object is similar to a function.
+         no state, only one method.
+     - In other words, can view function as just super-simple objects.
+     - Objects are first class in Java.
+     - So Java has first-class functions! e.g., CaseInsensitive.
+
+   Remember Anonymous functions (fun in OCaml, lambda in python)?
+     - if you only need to use a function in one
+       place, sometimes better to write it in-line.
+     - Java has *Anonymous classes* 
+     - like an anonymous function (but generalized to objects)
+
+   We don't have to declare CaseInsensitive somewhere outside of
+   SortList.
+*/
+
+
+import java.util.*;
+
+class SortList {
+    public static void main(String[] args) {
+	List<String> strings = new LinkedList<String>();
+	strings.add("Hello");
+	strings.add("Goodbye");
+	strings.add("java");
+	strings.add("hello");
+	strings.add("bananas");
+	strings.add("Java");
+	strings.add("Bob");
+	strings.add("words");
+
+	// Inline using Anonymous class
+	Collections.sort(strings, new Comparator<String>() {
+		public int compare(String s1, String s2) {
+		    return s1.toLowerCase().compareTo(s2.toLowerCase());
+		}
+	    });
+	System.out.println(strings);
+    }
+}   
+
+/*   - Anonymous classes are cool, because you can use the full
+       generality of classes: state, multiple methods, inheritance,
+       overloading, etc.
+       
+     - In this case, we just want a function (the super-simple kind of
+       object).
+     - Java 8 added lambda expressions for this!
+ */
+
+import java.util.*;
+
+class SortList {
+    public static void main(String[] args) {
+	List<String> strings = new LinkedList<String>();
+	strings.add("Hello");
+	strings.add("Goodbye");
+	strings.add("java");
+	strings.add("hello");
+	strings.add("bananas");
+	strings.add("Java");
+	strings.add("Bob");
+	strings.add("words");
+
+        // Inline using lambda
+        Collections.sort(strings, (s1, s2) -> s1.toLowerCase().compareTo(s2.toLowerCase()));
+        System.out.println(strings);
+    }
+}   
+
+
+/*   - Java's lambdas are better than Python's!
+       Python only allows a single *expression* in the body.
+     - Java allows multiple *statements*
+ */       
+
+import java.util.*;
+
+class SortList {
+    public static void main(String[] args) {
+	List<String> strings = new LinkedList<String>();
+	strings.add("Hello");
+	strings.add("Goodbye");
+	strings.add("java");
+	strings.add("hello");
+	strings.add("bananas");
+	strings.add("Java");
+	strings.add("Bob");
+	strings.add("words");
+
+        // log the comparisons made during sort.
+        Collections.sort(strings, (s1, s2) -> {
+       	   System.out.println("Comparing " + s1 + " to " + s2);
+	   return s1.toLowerCase().compareTo(s2.toLowerCase());
+        });
+        System.out.println(strings);
+    }
+}   
+
+/*   - Lambda expressions tutorial:
+     - https://docs.oracle.com/javase/tutorial/java/javaOO/lambdaexpressions.html
+ */
+
+/* More complex example. Remember OCaml had polymorphic pairs:
+
+   OCaml:
+   # ("hello", 5);;
+   - : string * int = ("hello", 5)
+   # (5, "hello");;
+   - : int * string = (5, "hello")
+
+   We can do something similar in Java
+ */
+
+class Pair<A,B> {
+    public A fst;
+    public B snd;
+    Pair(A fst, B snd) {
+	this.fst = fst;
+	this.snd = snd;
+    }
+
+    public String toString() {
+	return "(" + fst.toString() + ", " + snd.toString() + ")";
+    }
+}
+
+/* Now we want to sort a list of pairs. What to do?
+
+   - Could make Pair<A,B> implement Comparable.
+   - How do we compare the elements? Need them to be comparable.
+   - "Constrained generics" combines parametric polymorphism
+     and subtyping. <T extends Comparable> means "any type T
+     that has a Comparable<T> instance"  (not quite, but close
+     enough).
+ */
+
+class Pair<A extends Comparable<A>,B extends Comparable<B>> implements Comparable<Pair<A,B>> {
+    public A fst;
+    public B snd;
+    Pair(A fst, B snd) {
+	this.fst = fst;
+	this.snd = snd;
+    }
+
+    public String toString() {
+	return "(" + fst.toString() + ", " + snd.toString() + ")";
+    }
+
+    public int compareTo(Pair<A,B> other) {
+	int c = this.fst.compareTo(other.fst);
+	if (c == 0) {
+	    return this.snd.compareTo(other.snd);
+	}
+	return c;
+    }
+}
+
+/* - There's a Problem: Now we've limited our Pair class to comparable
+     components.
+   - What if we want to put incomparable things into a pair, and we don't
+     care about sorting? Out of luck!
+   - Could add ComparablePair subclass of Pair, but that's kind of messy.
+   - Better: Use Comparator again! Factors out the Comparable stuff into
+     a separate class. 
+   - Now just one Pair class.
+ */
+ 
+class Pair<A,B> {
+    public A fst;
+    public B snd;
+    Pair(A fst, B snd) {
+	this.fst = fst;
+	this.snd = snd;
+    }
+
+    public String toString() {
+	return "(" + fst.toString() + ", " + snd.toString() + ")";
+    }
+}
+
+class ComparePair<A extends Comparable<A>, B extends Comparable<B>> implements Comparator<Pair<A,B>> {
+    public int compare(Pair<A,B> p1, Pair<A,B> p2) {
+	int c = p1.fst.compareTo(p2.fst);
+	if (c == 0) {
+	    return p1.snd.compareTo(p2.snd);
+	}
+	return c;
+    }
+}
+
+class SortPair {
+    public static void main(String[] args) {
+	List<Pair<String,Integer>> scores = new LinkedList<Pair<String,Integer>>();
+	
+	scores.add(new Pair("Steve", 11223));
+	scores.add(new Pair("Fred", 33424));
+	scores.add(new Pair("Ann", 22322));
+	scores.add(new Pair("Bill", 0));
+	scores.add(new Pair("Jane", 48313));
+	scores.add(new Pair("Al", 55231));
+	scores.add(new Pair("Linda", 42432));
+	scores.add(new Pair("Bill", 3));
+	scores.add(new Pair("Alice", 55231));
+
+	Collections.sort(scores, new ComparePair<String,Integer>());
+	System.out.println(scores);
+    }
+}
+
+/* Back to case-insensitive sort.
+   - Inefficient: each comparison creates two new strings!
+   - How can we improve this?
+   - map List<String> to List<Pair<String,String>>
+   - first is original element, second is lowercase
+   - sort by lowercase
+   - map first
+ */
+
+------------------------- Exceptions -------------------------
+/*
+
+Java has exceptions that are similar to those we've seen already in OCaml.
+
+Example:
+
+interface List {
+  void add(Object e);
+  Object get(int i);
+}
+
+What should an implementation of get() do when the given index is too big or
+too small?
+
+ Java provides the class Exception as the base class of all
+ exceptions.  Users can then define their own subclasses, typically as
+ direct subclasses of Exception.
+
+ class MyException extends Exception {}
+
+ A bunch of exceptions already defined in the library
+   - NullPointerException, IndexOutOfBoundsException
+
+ Can add fields and methods, of course, but typically don't need much
+ of anything.
+
+ Exception objects can be *thrown*.  Halts execution of the current
+ method.
+   - like "raise" in OCaml
+*/
+
+interface List {
+  void add(Object e);
+  Object get(int i);
+}
+
+class ArrayList implements List {
+    Object[] elems;
+    ArrayList() {
+	elems = new Object[0];
+    }
+    public void add(Object e) {
+	// do stuff...
+    }
+    public Object get(int i) {
+	try {
+	    return elems[i];
+	} catch(ArrayIndexOutOfBoundsException e) {
+	    throw new IndexOutOfBoundsException("What were you thinking???");
+	}
+    }
+} 
+
+/*  Exceptions propagate up the call chain, halting execution of each
+    method in the chain and returning to its caller, all the way back to
+    main, where the exception ends the program.
+     -- Just like OCaml.
+
+    Why is catching the ArrayIndexOutOfBoundsException and
+    then throwing a new IndexOutOfBoundsException better than just
+    letting the ArrayIndexOutOfBoundsException propagate to the caller?
+
+    - Modularity: don't leak implementation details to clients!
+    - We might also implement a LinkedList, which wouldn't throw
+      ArrayIndexOutOfBoundsException. Now two implementations behave
+      differently.
+    - Moral: exceptions are part of the "interface" of a class!
+
+    Question: could instead have done:
+
+ 	if(i < elems.length) {
+	    return elems[i];
+	} else {
+	    throw new IndexOutOfBoundsException();
+	}
+
+    Pros and Cons?
+     - in this example, pretty much fine either way.
+     - VERY slight overhead for exceptions
+     - separating *Application logic* from handling of *Exceptional cases*
+       is usually a win (that's why exceptions exist in the first place).
+       - simplifies code.
+       - standardized error handling protocol.
+       - handle errors where/when it makes the most sense.
+     - In this case, no real difference: application logic is one tiny line.
+     - Sometimes it makes sense to do some input validation ahead-of-time,
+       before embarking on some complex procedure.
+       - Some errors are hard to recover from.
+       - Better to avoid them if we can.
+       - More about this later.
+ */

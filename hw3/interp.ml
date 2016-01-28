@@ -3,7 +3,7 @@
    UID: 919840157
 
    Others With Whom I Discussed Things:
-
+    Irakli Khizanishvili
    Other Resources I Consulted:
    
 *)
@@ -181,11 +181,11 @@ let tieTheKnot nm v =
 *)
 let rec evalExpr (e:moexpr) (env:moenv) : movalue =
   match e with
-      IntConst(i)              -> IntVal(i)
-    | BoolConst(b)             -> BoolVal(b)
-    | Nil                      -> NilVal
-    | Var(v)                   -> (try (Env.lookup v env) with _ -> raise (DynamicTypeError ("Variable not found in environment: " ^ v) ))
-    | BinOp(e1, op, e2)        -> (match (evalExpr e1 env, op, evalExpr e2 env) with
+    IntConst(i)                -> IntVal(i)
+  | BoolConst(b)               -> BoolVal(b)
+  | Nil                        -> NilVal
+  | Var(v)                     -> (try (Env.lookup v env) with _ -> raise (DynamicTypeError ("Variable not found in environment: " ^ v) ))
+  | BinOp(e1, op, e2)          -> (match (evalExpr e1 env, op, evalExpr e2 env) with
                                   | (IntVal i1, Plus, IntVal i2)  -> IntVal(i1 + i2)
                                   | (IntVal i1, Minus, IntVal i2) -> IntVal(i1 - i2)
                                   | (IntVal i1, Times, IntVal i2) -> IntVal(i1 * i2)
@@ -216,8 +216,7 @@ let rec evalExpr (e:moexpr) (env:moenv) : movalue =
                                   )
   | Match (e1, l1)             -> let (env', e2) = (matchCases (evalExpr e1 env) l1) in evalExpr e2 (Env.combine_envs env' env)
   | Let (nm, defn, body)       -> let env' = Env.combine_envs env (patMatch nm (evalExpr defn env)) in evalExpr body env'
-  | LetRec (nm, Fun(x,y), e2)  -> let env' = Env.add_binding nm (tieTheKnot nm (evalExpr (Fun(x,y)) env)) env in evalExpr e2 env'
-  | _                          -> raise MatchFailure
+  | LetRec (nm, f, e2)         -> let env' = Env.add_binding nm (tieTheKnot nm (evalExpr f env)) env in evalExpr e2 env'
 
 (* evalExprTest defines a test case for the evalExpr function.
    inputs: 
@@ -245,6 +244,8 @@ let evalExprTests = [
   ; ("BadIf",       If(IntConst 1, IntConst 1, IntConst 1),        Exception (DynamicTypeError "If expected a BoolVal as a condition"))
   ; ("Let",         Let(VarPat "x", IntConst 1, Var "x"),          Value (IntVal 1))
   ; ("Fun",         FunCall(Fun(VarPat "x", Var "x"), IntConst 5), Value (IntVal 5))
+  ; ("BadLetRec1", LetRec("foo", Var "foo", IntConst 5), Exception (DynamicTypeError "Variable not found in environment: foo"))
+  ; ("BadLetRec2", LetRec("foo", IntConst 5, Var "foo"), Exception (DynamicTypeError "tieTheKnot expected a function"))
   ]
 ;;
 

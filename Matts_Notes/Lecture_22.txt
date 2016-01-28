@@ -1,0 +1,210 @@
+   - We started talking about concurrency and parallelism, two words
+     that mean "running multiple *threads of execution* at the same
+     time".
+
+     Who remembers the difference between concurrency and parallelism?
+       - concurrency: switching between multiple threads, so each
+         makes progress. only 1 running at any single instant.
+       - parallelism: multiple threads running in a single instant.
+
+     In Java concurrency and parallelism are combined. If we have
+     multiple CPUs/cores, Java will use them, and we get
+     parallelism. If not, we get concurrency.
+
+   - Saw Java's Futures, which are simple way to get concurrency.
+       - submit() a method m with return type T to be run in parallel
+       - return value T is not ready yet, so submit() gives us
+         a Future<T>.
+       - we go off and do something else while m works
+       - later we get() the return value from the Future.
+       - if m is still not done, get() waits until it is.
+       - used my 8 cores to do 35 seconds worth of work in 5 seconds.
+       - 7x speedup
+
+ - Another simple setting is *message passing*. This is what you will
+   use in Homework 6. Again, threads do not share resources, but can
+   communicate with each other *while running* by sending messages.
+
+   We can send messages between threads using Java's BlockingQueue
+   interface, which is a kind of queue designed for multi-threaded
+   programs. Two methods: take() and put().
+
+   http://docs.oracle.com/javase/8/docs/api/java/util/concurrent/BlockingQueue.html
+
+ - The other piece: the Thread class. With futures, we didn't see
+   these guys.
+
+   http://docs.oracle.com/javase/8/docs/api/java/lang/Thread.html
+
+
+Example: Alice and Bob take turns.
+
+Use a BlockingQueue to send messages to each other.
+
+        +-----------+          +-----------+
+	|           | -->  <-- |           |
+	|           |    ||    |           |
+	|   Alice   |    ||    |    Bob    |
+        |           |    ||    |           |
+        |           |    \/    |           |
+	|           | <--  --> |           |
+        +-----------+          +-----------+
+
+--------------------------------------------------
+import java.util.concurrent.*;
+
+class Person implements Runnable {
+    String name;
+    BlockingQueue<String> queue;
+    
+    Person(String name, BlockingQueue<String> queue) {
+	this.name = name;
+	this.queue = queue;
+    }
+
+    public void run() {
+	while(true) {
+	    try {
+		String last = queue.take();
+		System.out.println(name + " after " + last);
+		queue.put(name);
+	    } catch(InterruptedException e) {
+		// ignore again...
+	    }
+	}
+    }
+}
+
+class TakeTurns {
+    public static void main(String[] args) {
+	BlockingQueue<String> queue = new ArrayBlockingQueue<String>(1);
+
+	new Thread(new Person("Alice", queue)).start();
+	new Thread(new Person("Bob", queue)).start();
+
+	try {
+	    queue.put("we begin");
+	} catch(InterruptedException e) {
+	    // this is getting out of hand...
+	}
+    }
+}
+--------------------------------------------------
+
+   - Problem: not fair! The *scheduler* runs Alice's thread for a
+     while, then Bob's thread for a while. So each can have multiple
+     turns in a row.
+   - The problem here is that Bob and Alice *share* a single queue!
+     The first to take() gets the next turn. 
+   - Add a second queue.
+     Alice takes from the queue Bob puts into.
+     Bob takes from the queue Alice puts into.
+
+        +-----------+           +-----------+
+	|           | ========> |           |
+	|   Alice   |           |    Bob    |
+	|           | <======== |           |
+	+-----------+           +-----------+
+
+--------------------------------------------------
+import java.util.concurrent.*;
+
+class Person implements Runnable {
+    String name;
+    BlockingQueue<String> input, output;
+    
+    Person(String name,
+	   BlockingQueue<String> input,
+	   BlockingQueue<String> output) {
+	this.name = name;
+	this.input = input;
+	this.output = output;
+    }
+
+    public void run() {
+	while(true) {
+	    try {
+		String last = input.take();
+		System.out.println(name + " after " + last);
+		output.put(name);
+	    } catch(InterruptedException e) {
+		// ignore again...
+	    }
+	}
+    }
+}
+
+class TakeTurns {
+    public static void main(String[] args) {
+	BlockingQueue<String> q1 = new ArrayBlockingQueue<String>(1);
+	BlockingQueue<String> q2 = new ArrayBlockingQueue<String>(1);
+
+	new Thread(new Person("Alice", q1, q2)).start();
+	new Thread(new Person("Bob", q2, q1)).start();
+
+	try {
+	    q1.put("we begin");
+	} catch(InterruptedException e) {
+	    // this is getting out of hand...
+	}
+    }
+}
+
+--------------------------------------------------
+
+Concurrency without Parallelism
+  Python supports concurrency, but not parallelism.
+    - can write multi-threaded code
+    - will only utilize one CPU core.
+
+  What is the point of concurrency without parallelism?
+  
+  1 GHz CPU can run 1 billion instructions per second.
+
+  1 CPU instruction                             1   ns
+    (not really, but close enough) 
+
+  Main memory reference                       100   ns
+  Read 1 MB from memory                   250,000   ns    0.25 ms
+  Read 1 MB from SSD*                   1,000,000   ns    1    ms
+  Read 1 MB from disk                  20,000,000   ns   20    ms
+  Send packet CA->Netherlands->CA     150,000,000   ns  150    ms  
+
+  Code that has do to very much of any of this will not use much
+  CPU. Will spend a lot of *CPU cycles* waiting for these things to
+  complete.
+
+  Concurrency allows us to have a bunch of these operations pending at
+  the same time, and still make progress on other parts of the
+  program.
+
+  Better CPU utilization.
+
+  Example: Operating System.
+  - The relationship between Threads and Programs is
+    analogous to the relationship between Programs and Computers.
+  - Operating system is just a program with some extra privileges and
+    responsibilities.
+
+  - Runs multiple programs concurrently.
+  - Switches between them so they all make progress.
+  - Switches often enough that they *seem* to be running at the same time.
+  - Of course, with multiprocessor/multicore hardware often *do*
+    run at the same time.
+  - Generally more programs than CPUs/cores.  
+
+  Example: Web Server.
+
+  - A web server's main job is to move data between file system
+    (html/js/css files, images, etc), a database, and the client.
+
+  - Each of these sources is super slow. Combining all this data
+    (e.g. generating html from result of database query) takes some
+    CPU work, but very little time compared to shuttling the data
+    around.
+
+  - By using concurrency, 1 Server with a single CPU core can handle
+    thousands of simultaneous clients.
+
+  It's possible to write a web server without using threads, but
+  threads are a nice abstraction. Simplify code.

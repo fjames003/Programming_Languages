@@ -1,0 +1,179 @@
+# for ... in
+for a in [1,2,3]:
+  print(a)
+
+# in works by itself. tests if one thing is contained in another.
+
+if 1 in [1,2,3]:
+  print('yes')
+
+if 4 in [1,2,3]:
+  print('yes')
+
+for a in [1,2,3]:
+  print(a)
+  print(a + 5)
+
+# Python has expressions and statements.
+# Some Expressions:
+#     5
+#     5 + 2
+#     obj.method(e1, ..., en)
+#       (each of e1, ..., en is an expression)
+#     d[k]
+# Expressions are a form of statement.
+# Statements also include assignment,
+# return, etc. 
+
+# Python has first-class functions.
+# Two ways to write a function: as an
+# expression and as a statement.
+
+# as an expression: lambda
+
+f = lambda x : x + 5
+
+# like fun x -> x+5 in OCaml:
+#   anonymous function (doesn't have a name)
+#   since first-class, we can give it a name by normal variable assignment
+
+# the body of a lambda (after the colon) must be an expression.  the
+# value of this expression is the return value of calling the
+# function.
+
+f = lambda a : print(a)
+f = lambda a : print(a + 5)
+
+# `def` uses statements to define a function
+# the body can be multiple statements
+# have to use `return` explicitly.
+
+def f(a):
+  print(a)
+  print(a+5)
+  return a+6
+
+# f is still first class!  
+g = f
+
+# we can return functions from other functions:
+
+f = lambda x : lambda y : x + y
+
+# same thing using `def` functions:
+
+def f(x):
+  def g(y):
+    return x + y
+  return g
+
+# Python has classes and objects.
+# self is like 'this' in C++,java,javascript
+
+class Counter:
+  # constructor
+  def __init__(self):
+    self.value = 0
+  def get(self):
+    return self.value
+  def inc(self):
+    self.value += 1
+
+# Python has static scoping!
+# we can emulate classes using functions and closures and mutable state:
+
+# this works
+def NewCounter():
+  value = 0
+  def obj(op):
+    if op == "get":
+      return value
+    else:
+      return "bad op"
+  return obj
+
+# this doesn't work
+def NewCounter():
+  value = 0
+  def obj(op):
+    if op == "get":
+      return value
+    elif op == "inc":
+      value += 1
+    else:
+      return "bad op"
+  return obj
+
+# why not? Weird consequence of how python mixes closures and mutable
+# variables. Because we update value, obj doesn't get it in its
+# closure.  So it becomes an uninitialized local variable (i.e. local
+# to obj).
+
+# this works
+def NewCounter():
+  state = { 'value' : 0 }
+  def obj(op):
+    if op == "get":
+      return state['value']
+    elif op == "inc":
+      state['value'] += 1
+    else:
+      return "bad op"
+  return obj
+
+# why? we no longer directly update state (the variable name), but
+# instead indirectly update state's value. 
+
+# This is an example of Python's multi-paradigm stuff interacting in
+# bad ways.
+
+# Example: unzip
+#
+#  unzip [(1,4), (2,5), (3,6)] = ([1,2,3], [4,5,6])
+
+# This works, but traverses the list twice.
+def unzip(l):
+  return ([x for (x,y) in l], [y for (x,y) in l])
+
+
+# Remember unzip in OCaml?
+#
+# let rec unzip(l) =
+#   match l with
+#     [] -> ([],[])
+#     (x,y)::l' -> let (xs,ys) = unzip l' in (x::xs, y::ys)
+#
+
+# here we traverse the list once.
+# Note: using lots of mutation!
+# Unlike OCaml, mutation is
+# idiomatic in python.
+
+def unzip(l):
+  l1 = []
+  l2 = []
+  for (x,y) in l:
+    l1.append(x)
+    l2.append(y)
+  return (l1,l2)
+
+# example: primesUpToN
+
+def divides(d,n):
+  return n % i == 0
+
+def isPrime(n):
+  for i in range(2,n):
+    if divides(i,n):
+      return False
+  return True
+
+def primesUpToN(n):
+  output = []
+  for x in range(2,n+1):
+    if isPrime(x):
+      output.append(x)
+  return output
+
+# Exercise: write primesUpToN using
+# list comprehensions

@@ -1,0 +1,326 @@
+Last time: append.
+  
+  myAppend([], L2, L2).
+  myAppend([Hd|Tl], L2, [Hd|R]) :- myAppend(Tl, L2, R).
+
+Note: we can also program this
+
+  myAppend2(L1,L2,L3) :- L1=[], L3=L2.
+  myAppend2(L1,L2,L3) :-
+    L1=[Hd|Tl],
+    L3=[Hd|R],
+    myAppend2(Tl,L2,R).
+
+Note: now any myAppend(A,B,C) will match the head of both rules.
+  The conditions may fail, causing backtrack.
+
+  So the difference between myAppend vs myAppend2 is just how much
+  backtracking they will do.
+
+  Other predefined list predicates (try these queries!).
+    member(X,Y)
+      member(3,[1,2,3,4,5]). 
+      member(6,[1,2,3,4,5]). 
+      member(E,[1,2,3,4,5]).
+      member(3,L).
+    select(X,Y,Z)
+      [remove one occurrence of element X in list Y to produce list Z]
+      select(X,[1,2,3,4,5],Z)
+      select(X,Y,[1,2,3,4,5]).
+      select(X,Y,Z).
+    nth0(X,Y,Z)
+      nth0(X,Y,Z).
+    nth1(X,Y,Z)
+      nth1(X,Y,Z).
+    length(X,Y)
+      length(X,Y).
+  See the SWI Prolog manual for all the predefined predicates.
+
+  Another predefined predicate:
+
+  Another predefined predicate:
+
+  Try these, and ask for a few solutions of each:
+  reverse(X,Y).
+  reverse(X,X).
+
+  As with append, start with the ML version to make things clearer.
+
+  let rec reverse l =
+    match l with
+      []     -> []
+    | hd::tl -> reverse tl @ [hd]
+
+
+  Now in prolog:
+
+  reverse([], []).   % base case
+  reverse([H | T], R) :- % recursive case
+    reverse(T, X),
+    append(X, [H], R).
+
+  Data Structures
+  -------------
+
+  You can define your own data structures implicitly, by using
+  atoms as *uninterpreted functions*.
+   - like the constructors in an OCaml data type
+   - no declarations required in prolog
+
+   Lists need not be builtin
+     cons(1, cons(2, nil))
+
+   append_(nil, L2, L2).
+   append_(cons(Hd,Tl), L2, cons(Hd,R)) :- append_(Tl, L2, R).
+
+   Note: no rules to prove facts of the form nil or cons
+     - they are not predicates!
+     - just data structures which can be arguments to predicates like append
+     - "uninterpreted functions"
+     - natural generalization of uninterpreted constants like cmsi386
+
+  Search
+  ------
+
+  Prolog really shines on database querying, as our prereq example
+  showed.  Another area it shines on is search problems.  E.g.,
+  Consider the wolf-goat-cabbage problem (You may know this by a
+  different name).
+
+  A person wants to move his wolf,goat,and cabbage across a river.
+  Can only take one of them across at a time (or none).
+  Can't leave goat alone with cabbage or wolf alone with goat.
+
+  Just express the constraints of the
+  problem -- e.g. goat and wolf can't be left alone -- and Prolog
+  finds a solution!
+
+  Let's do it:
+  - Person can make 4 different moves, depending on what he takes
+    across the river with him: wolf, goat, cabbage, or none.
+    
+  - Each move changes the configuration of the world (positions of the person,
+    wolf, goat, cabbage).
+
+  - move(Config1, Move, Config2)
+    - need to ensure the move makes sense and is "safe"
+
+  - How to represent a configuration of the world?
+    - a list representing the position of the person, wolf, goat, and cabbage.
+      - constant w for west, e for east
+      e.g., start at [w,w,w,w], trying to get to [e,e,e,e]
+      many other possibilities
+
+1) when can the person move alone?
+   what is the relationship between the old configuration and the new one?
+
+   - goat and cabbage on opposite sides
+   - wolf and goat on opposite sides
+   - person ends up on opposite side
+
+% farmer goes alone.
+move(state(P,W,G,C), none, state(Pnew, W, G, C)) :-
+    opposite(P,Pnew),
+    opposite(C,G),
+    opposite(W,G).
+
+
+2) when can the person move the wolf across the river?
+   what is the relationship between the old configuration and the new one?
+
+   - initially person and wolf on the same side.
+   - goat and cabbage need to be on opposite sides.
+   - person and wolf end up on opposite side.
+   
+
+% can only move wolf if person and wolf are on the same side.
+move([P,P,G,C], wolf, [Pnew, Pnew, G, C]) :-
+    opposite(P,Pnew),    % move to opposite shore.
+    opposite(C,G).       % goat and cabbage can't be left together.
+
+3) goat.
+
+% wolf and cabbage can be left together.
+move([P,W,P,C], goat, [Pnew, W, Pnew, C]) :-
+    opposite(P,Pnew).
+
+4) cabbage.
+
+% wolf and goat can't be left together.
+move([P,W,G,P], cabbage, [Pnew, W, G, Pnew]) :-
+    opposite(P,Pnew),
+    opposite(W,G).
+
+5) Now put it all together with:
+    - puzzle(Start, Actions, Goal)
+    
+   If we start in Start config and perform all the actions in order
+   (each of which must be legal), then we end in Goal config.
+
+   How? Recursion!
+    
+     - what's the base case?
+        zero actions 
+     - what's the recursive case?
+        n > 0 actions
+
+    puzzle(Start, [], Start).
+    puzzle(Start, [Act|Acts], End) :-
+      move(Start, Act, Next),
+      puzzle(Next, Acts, End).
+
+    puzzle([w,w,w,w], Actions, [e,e,e,e]).
+
+    When querying, need to bound the length of Actions so we
+    don't get stuck down infinite paths.
+
+    length(Actions,L), puzzle([w,w,w,w], Actions, [e,e,e,e]).
+    - show what just the first term does on its own
+    - bounds the size of Actions
+    - solver will first try to find a solution using 0 actions,
+      then 1 action, then 2 actions, etc.
+    - net effect: finds them in order of increasing number of actions.
+
+  Imagine writing this in another language -- you'd have to code up
+  explicitly the search through all possible configurations.  We'll
+  see more problems like this later.
+
+How the Prolog Interpreter Works
+=====================
+
+We've seen how Prolog works from the user's point of view.  Now let's
+see what's actually going on under the covers.
+
+A fundamental operation, as we've discussed, is *unification*:  given
+terms t1 and t2, find a *substitution* s -- mapping from variables to
+terms -- such that s(t1) = s(t2).  Here = means syntactically the same exact tree.
+The substitution s is called a *unifier* for t1 and t2.
+
+Very similar to pattern matching in ML, although now both sides can have
+variables (i.e., both sides are patterns).
+ - recall that pattern matching also produced a substitution
+    - an environment
+
+Examples:
+
+?- a = b.
+false.
+
+?- f(X,b) = f(a,Y).
+X = a,
+Y = b.
+
+?- g(a,X,X) = g(Y,a,Z).
+X = Y,
+Y = Z,
+Z = a.
+
+?- g(a,X,X) = g(Y,b,Y).
+false.
+
+needs (a=Y, X=b, X=Y), i.e. a = Y = X = b, which is false.
+
+- unifying a query with the head of a rule has the effect of doing
+  parameter passing and result returning
+	    append([1,2,3], [4,5], X)
+
+- unifying a variable with a value has the effect of "assignment"
+  ?- X=0, X=[1,2].
+  false.
+  
+  (needs 0=[1,2].)
+
+- unification deconstructs values, as with ML's pattern matching
+  [X|Y] = [1,2,3] binds X to 1 and Y to [2,3]
+
+Notice that there is not always a unique unifier for two terms:
+
+?- f(X,Y) = f(a,Y).
+X = a
+
+Could also assign Y = a, or Y = b, or anything else.
+Would still unify.
+
+A key property relied upon by Prolog is the fact that, although there
+is not always a unique unifier, there is always a unique (up to
+variable renaming) *most general unifier* (MGU).
+
+Intuitively, s is an MGU for t1 and t2 if any other unifier is "more
+specific".
+
+Example: ?- f(X,Y) = f(a,Y), Y=5.
+X=a,
+Y=5.
+
+The solution to the first conjunct f(X,Y) = f(a,Y) might have given a
+substitition for Y, e.g. Y=0. Would have worked for this, but then
+we'd need to prove 0=5, which is false. MGU prevents this from
+happening.
+
+Now that we know how unification works, let's see how it's used in the
+overall Prolog algorithm.
+
+Given a goal to be proven:
+  - initially the query
+
+Try to unify the goal with one of the rules.
+If it succeeds, replace the goal by the body of the rule.
+These are now new goals.
+
+Continue until all goals are satisfied.
+
+We do this in depth-first manner.
+  - simply means that new goals are placed on the front of a stack of goals
+
+Here's an example of how the Prolog interpreter uses resolution:
+
+p(f(Y)) :- q(Y), r(Y).
+
+q(h(Z)) :- t(Z).
+
+r(h(a)).
+
+t(a).
+
+Consider a query p(X).  Show it in the interpreter.
+
+What happens?  Maintain a list of goals to be proven:
+
+query = p(X)
+
+Goals to be proven = [p(X)].
+
+1) Try first rule:
+   p(f(Y)) = p(X)
+   X = f(Y)
+   Goals to be proven [q(Y), r(Y)].
+   p(X) is gone. If [q(Y), r(Y)] is true, then
+   p(X) is true for X = f(Y).
+
+2) Need to prove q(Y). Try the second rule:
+   q(h(Z)) = q(Y)
+   Y = h(Z)
+   Goals to be proven [t(Z), r(h(Z))].
+
+3) Need to prove t(Z). Try the fourth rule:
+   t(a) = t(Z).
+   Z = a.
+   Goals to be proven [r(h(a))].
+
+4) Need to prove r(h(a)). Try the third rule.
+   r(h(a)) = r(h(a)).
+   true.
+   Goals to be proven []. 
+   
+Since we have no more goals to prove, we're done!  We've successfully
+found a proof of the query.
+
+Q:  How do we get the value of X for which p(X) was provable?
+A:  Easy, keep extra information as we go -- either the substituted
+    query, or the substitution we build up as we go.
+
+Q:  How did Prolog magically know which clause to resolve each goal
+    with?
+A:  There's no magic.  Prolog just tries each clause in order.
+    Whenever the head of a clause fails to unify, we try the next clause.
+    When all clauses are done, we *backtrack*
